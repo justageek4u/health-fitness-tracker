@@ -376,30 +376,6 @@ export default function HealthFitnessTracker() {
     }
   }, [quickFoodId, quickFoodServingId, foodsById]);
 
-    exercisesForDay.forEach((exercise) => {
-      if (exercise.type === "cardio") {
-        nextDraft[exercise.id] = workoutDraft[exercise.id] || {
-          minutes: exercise.targetTime || "",
-          calories: exercise.targetCalories || "",
-        };
-      } else {
-        const targetSets = Math.max(1, Number(exercise.targetSets || 1));
-        const existingSets = workoutDraft[exercise.id]?.sets || [];
-
-        nextDraft[exercise.id] = {
-          sets: Array.from({ length: targetSets }, (_, idx) => {
-            return existingSets[idx] || {
-              reps: exercise.targetReps || "",
-              weight: "",
-            };
-          }),
-        };
-      }
-    });
-
-    setWorkoutDraft(nextDraft);
-  }, [selectedWorkoutDay, state.workoutPlan]);
-
   useEffect(() => {
     if (!saveMessage) return;
     const timer = setTimeout(() => setSaveMessage(""), 2200);
