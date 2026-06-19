@@ -2589,7 +2589,215 @@ function deleteWeightLog(id) {
   </div>
 )}
 
-        {activeTab === "workouts" && <PlaceholderPanel title="Workouts" description="Next section to implement: workout import, add/replace logic, manual plan builder, and workout plan editing." />}
+        {activeTab === "workouts" && (
+  <div className="grid gap-4 xl:grid-cols-[0.95fr,1.05fr]">
+    {/* Left column */}
+    <div className="space-y-4">
+      <AppSection title="Import / Build Workout Plan">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            CSV headers: <span className="font-medium">Day, Exercise, Type, TargetSets, TargetReps, TargetTime, TargetCalories, Notes</span>
+          </div>
+
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-slate-700">Upload CSV</label>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handlePlanFileUpload}
+              className="block w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-slate-700">Paste CSV</label>
+            <textarea
+              value={manualPlanText}
+              onChange={(e) => setManualPlanText(e.target.value)}
+              className="min-h-[180px] w-full rounded-2xl border border-slate-300 p-3 font-mono text-xs"
+            />
+            <button
+              onClick={importManualPlan}
+              className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
+            >
+              Import Pasted CSV
+            </button>
+          </div>
+        </div>
+      </AppSection>
+
+      <AppSection title="Manual Plan Builder">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <select
+            className="rounded-2xl border border-slate-300 bg-white px-3 py-3"
+            value={planBuilder.day}
+            onChange={(e) => setPlanBuilder((prev) => ({ ...prev, day: e.target.value }))}
+          >
+            {days.map((day) => (
+              <option key={day} value={day}>
+                {day}
+              </option>
+            ))}
+          </select>
+
+          <input
+            className="rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Exercise"
+            value={planBuilder.exercise}
+            onChange={(e) => setPlanBuilder((prev) => ({ ...prev, exercise: e.target.value }))}
+          />
+
+          <select
+            className="rounded-2xl border border-slate-300 bg-white px-3 py-3"
+            value={planBuilder.type}
+            onChange={(e) => setPlanBuilder((prev) => ({ ...prev, type: e.target.value }))}
+          >
+            <option value="lift">Lift</option>
+            <option value="cardio">Cardio</option>
+          </select>
+
+          <input
+            type="number"
+            className="rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Target sets"
+            value={planBuilder.targetSets}
+            onChange={(e) => setPlanBuilder((prev) => ({ ...prev, targetSets: e.target.value }))}
+          />
+
+          <input
+            type="number"
+            className="rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Target reps"
+            value={planBuilder.targetReps}
+            onChange={(e) => setPlanBuilder((prev) => ({ ...prev, targetReps: e.target.value }))}
+          />
+
+          <input
+            type="number"
+            className="rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Cardio minutes"
+            value={planBuilder.targetTime}
+            onChange={(e) => setPlanBuilder((prev) => ({ ...prev, targetTime: e.target.value }))}
+          />
+
+          <input
+            type="number"
+            className="rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Cardio calories"
+            value={planBuilder.targetCalories}
+            onChange={(e) => setPlanBuilder((prev) => ({ ...prev, targetCalories: e.target.value }))}
+          />
+
+          <input
+            className="rounded-2xl border border-slate-300 px-3 py-3 sm:col-span-2"
+            placeholder="Notes"
+            value={planBuilder.notes}
+            onChange={(e) => setPlanBuilder((prev) => ({ ...prev, notes: e.target.value }))}
+          />
+        </div>
+
+        <div className="mt-4">
+          <button
+            onClick={addPlanRow}
+            className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
+          >
+            Add Plan Row
+          </button>
+        </div>
+      </AppSection>
+    </div>
+
+    {/* Right column */}
+    <AppSection title="Edit Planned Workouts">
+      <div className="grid max-h-[760px] gap-3 overflow-auto pr-1">
+        {days.map((day) => {
+          const items = (state.workoutPlan || []).filter((row) => row.day === day);
+
+          return (
+            <div key={day} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="font-medium text-slate-900">{day}</div>
+
+              {items.length === 0 ? (
+                <div className="mt-2 text-sm text-slate-500">No exercises loaded.</div>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  {items.map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-white bg-white p-3 text-sm text-slate-700">
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <input
+                          className="rounded-2xl border border-slate-300 px-3 py-2"
+                          value={item.exercise}
+                          onChange={(e) => updatePlanRow(item.id, "exercise", e.target.value)}
+                        />
+
+                        <select
+                          className="rounded-2xl border border-slate-300 bg-white px-3 py-2"
+                          value={item.type}
+                          onChange={(e) => updatePlanRow(item.id, "type", e.target.value)}
+                        >
+                          <option value="lift">Lift</option>
+                          <option value="cardio">Cardio</option>
+                        </select>
+
+                        <input
+                          type="number"
+                          className="rounded-2xl border border-slate-300 px-3 py-2"
+                          value={item.targetSets || 0}
+                          onChange={(e) => updatePlanRow(item.id, "targetSets", e.target.value)}
+                          placeholder="Sets"
+                        />
+
+                        <input
+                          type="number"
+                          className="rounded-2xl border border-slate-300 px-3 py-2"
+                          value={item.targetReps || 0}
+                          onChange={(e) => updatePlanRow(item.id, "targetReps", e.target.value)}
+                          placeholder="Reps"
+                        />
+
+                        <input
+                          type="number"
+                          className="rounded-2xl border border-slate-300 px-3 py-2"
+                          value={item.targetTime || 0}
+                          onChange={(e) => updatePlanRow(item.id, "targetTime", e.target.value)}
+                          placeholder="Minutes"
+                        />
+
+                        <input
+                          type="number"
+                          className="rounded-2xl border border-slate-300 px-3 py-2"
+                          value={item.targetCalories || 0}
+                          onChange={(e) => updatePlanRow(item.id, "targetCalories", e.target.value)}
+                          placeholder="Calories"
+                        />
+
+                        <input
+                          className="rounded-2xl border border-slate-300 px-3 py-2 md:col-span-2 xl:col-span-2"
+                          value={item.notes || ""}
+                          onChange={(e) => updatePlanRow(item.id, "notes", e.target.value)}
+                          placeholder="Notes"
+                        />
+                      </div>
+
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={() => deletePlanRow(item.id)}
+                          className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </AppSection>
+  </div>
+)}
         {activeTab === "goals" && <PlaceholderPanel title="Goals" description="Next section to implement: simplified goals page including the sleep goal." />}
         {activeTab === "export" && <PlaceholderPanel title="Export / Backup" description="Next section to implement: CSV export, JSON backup, and JSON restore." />}
         {activeTab === "howTo" && <PlaceholderPanel title="How-To" description="Next section to implement: feature-by-feature instructions for the app." />}
