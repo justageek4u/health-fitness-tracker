@@ -2240,7 +2240,315 @@ function deleteWeightLog(id) {
     </div>
   </div>
 )}
-        
+        {activeTab === "foodsMeals" && (
+  <div className="grid gap-4 xl:grid-cols-[1fr,1.15fr]">
+    {/* Left column */}
+    <div className="space-y-4">
+      <AppSection title="Add Food">
+        <div className="space-y-3">
+          <input
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Food name"
+            value={foodForm.name}
+            onChange={(e) => setFoodForm((prev) => ({ ...prev, name: e.target.value }))}
+          />
+
+          <input
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Serving label (example: 1 cup)"
+            value={foodForm.servingLabel}
+            onChange={(e) => setFoodForm((prev) => ({ ...prev, servingLabel: e.target.value }))}
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              type="number"
+              className="rounded-2xl border border-slate-300 px-3 py-3"
+              placeholder="Protein (g)"
+              value={foodForm.protein}
+              onChange={(e) => setFoodForm((prev) => ({ ...prev, protein: e.target.value }))}
+            />
+            <input
+              type="number"
+              className="rounded-2xl border border-slate-300 px-3 py-3"
+              placeholder="Carbs (g)"
+              value={foodForm.carbs}
+              onChange={(e) => setFoodForm((prev) => ({ ...prev, carbs: e.target.value }))}
+            />
+            <input
+              type="number"
+              className="rounded-2xl border border-slate-300 px-3 py-3"
+              placeholder="Fat (g)"
+              value={foodForm.fat}
+              onChange={(e) => setFoodForm((prev) => ({ ...prev, fat: e.target.value }))}
+            />
+            <input
+              type="number"
+              className="rounded-2xl border border-slate-300 px-3 py-3"
+              placeholder="Calories"
+              value={foodForm.calories}
+              onChange={(e) => setFoodForm((prev) => ({ ...prev, calories: e.target.value }))}
+            />
+          </div>
+
+          <button
+            onClick={addFood}
+            className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
+          >
+            Save Food
+          </button>
+        </div>
+      </AppSection>
+
+      <AppSection title="Build Meal">
+        <div className="space-y-4">
+          <input
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Meal name"
+            value={mealDraftName}
+            onChange={(e) => setMealDraftName(e.target.value)}
+          />
+
+          {mealDraftItems.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              Use “Add to Meal” from a saved food serving on the right.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {mealDraftItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1fr,110px,auto] md:items-center"
+                >
+                  <div>
+                    <div className="font-medium text-slate-900">{item.foodName}</div>
+                    <div className="text-sm text-slate-600">
+                      {item.servingLabel} • {item.macros.calories} cal • P {item.macros.protein} • C {item.macros.carbs} • F {item.macros.fat}
+                    </div>
+                  </div>
+
+                  <input
+                    type="number"
+                    min="0.25"
+                    step="0.25"
+                    className="rounded-2xl border border-slate-300 px-3 py-2"
+                    value={item.quantity}
+                    onChange={(e) => updateMealDraftQty(item.id, e.target.value)}
+                  />
+
+                  <button
+                    onClick={() => removeMealDraftItem(item.id)}
+                    className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            {(() => {
+              const totals = mealDraftTotals();
+              return (
+                <div className="grid gap-2 sm:grid-cols-4">
+                  <div>Calories: <span className="font-medium">{Math.round(totals.calories)}</span></div>
+                  <div>Protein: <span className="font-medium">{Math.round(totals.protein)} g</span></div>
+                  <div>Carbs: <span className="font-medium">{Math.round(totals.carbs)} g</span></div>
+                  <div>Fat: <span className="font-medium">{Math.round(totals.fat)} g</span></div>
+                </div>
+              );
+            })()}
+          </div>
+
+          <button
+            onClick={saveMealTemplate}
+            className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
+          >
+            Save Meal
+          </button>
+        </div>
+      </AppSection>
+    </div>
+
+    {/* Right column */}
+    <div className="space-y-4">
+      <AppSection title="Saved Foods">
+        <div className="mb-3 grid gap-3 sm:grid-cols-[1fr,auto]">
+          <input
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Search foods"
+            value={foodSearch}
+            onChange={(e) => setFoodSearch(e.target.value)}
+          />
+          <label className="flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={showFavoriteFoodsOnly}
+              onChange={(e) => setShowFavoriteFoodsOnly(e.target.checked)}
+            />
+            Favorites only
+          </label>
+        </div>
+
+        <div className="grid max-h-[620px] gap-3 overflow-auto pr-1">
+          {filteredFoods.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              No saved foods found.
+            </div>
+          ) : (
+            filteredFoods.map((food) => (
+              <div key={food.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-slate-900">
+                      {food.favorite ? "★ " : ""}{food.name}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Added {new Date(food.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => toggleFoodFavorite(food.id)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
+                    >
+                      {food.favorite ? "Unfavorite" : "Favorite"}
+                    </button>
+                    <button
+                      onClick={() => renameFood(food.id)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
+                    >
+                      Edit Food
+                    </button>
+                    <button
+                      onClick={() => addServingToFood(food.id)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100"
+                    >
+                      Add Serving
+                    </button>
+                    <button
+                      onClick={() => deleteFood(food.id)}
+                      className="rounded-xl border border-rose-200 bg-white px-3 py-1 text-sm text-rose-600 hover:bg-rose-50"
+                    >
+                      Delete Food
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {(food.servings || []).map((serving) => (
+                    <div key={serving.id} className="rounded-2xl border border-white bg-white p-3 text-sm text-slate-700">
+                      <div className="font-medium text-slate-900">{serving.label}</div>
+                      <div className="mt-1">
+                        {serving.calories} cal • P {serving.protein} • C {serving.carbs} • F {serving.fat}
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => logServingNow(food.id, serving.id)}
+                          className="rounded-xl bg-gradient-to-r from-sky-600 to-violet-600 px-3 py-2 text-sm font-medium text-white hover:opacity-95"
+                        >
+                          Log
+                        </button>
+
+                        <button
+                          onClick={() => addServingToMealDraft(food.id, serving.id)}
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          Add to Meal
+                        </button>
+
+                        <button
+                          onClick={() => editServing(food.id, serving.id)}
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          Edit Serving
+                        </button>
+
+                        <button
+                          onClick={() => deleteServing(food.id, serving.id)}
+                          className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
+                        >
+                          Delete Serving
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </AppSection>
+
+      <AppSection title="Saved Meals">
+        <div className="mb-3 grid gap-3 sm:grid-cols-[1fr,auto]">
+          <input
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Search meals"
+            value={mealSearch}
+            onChange={(e) => setMealSearch(e.target.value)}
+          />
+          <label className="flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={showFavoriteMealsOnly}
+              onChange={(e) => setShowFavoriteMealsOnly(e.target.checked)}
+            />
+            Favorites only
+          </label>
+        </div>
+
+        <div className="grid max-h-[260px] gap-3 overflow-auto pr-1">
+          {filteredMeals.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              No saved meals found.
+            </div>
+          ) : (
+            filteredMeals.map((meal) => (
+              <div key={meal.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-slate-900">
+                      {meal.favorite ? "★ " : ""}{meal.name}
+                    </div>
+                    <div className="mt-1 text-sm text-slate-600">
+                      {Math.round(meal.totals?.calories || 0)} cal • P {Math.round(meal.totals?.protein || 0)} • C {Math.round(meal.totals?.carbs || 0)} • F {Math.round(meal.totals?.fat || 0)}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => toggleMealFavorite(meal.id)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                    >
+                      {meal.favorite ? "Unfavorite" : "Favorite"}
+                    </button>
+                    <button
+                      onClick={() => logMealNow(meal.id)}
+                      className="rounded-xl bg-gradient-to-r from-sky-600 to-violet-600 px-3 py-2 text-sm font-medium text-white hover:opacity-95"
+                    >
+                      Log Meal
+                    </button>
+                    <button
+                      onClick={() => deleteMealTemplate(meal.id)}
+                      className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </AppSection>
+    </div>
+  </div>
+)}
+
         {activeTab === "workouts" && <PlaceholderPanel title="Workouts" description="Next section to implement: workout import, add/replace logic, manual plan builder, and workout plan editing." />}
         {activeTab === "goals" && <PlaceholderPanel title="Goals" description="Next section to implement: simplified goals page including the sleep goal." />}
         {activeTab === "export" && <PlaceholderPanel title="Export / Backup" description="Next section to implement: CSV export, JSON backup, and JSON restore." />}
