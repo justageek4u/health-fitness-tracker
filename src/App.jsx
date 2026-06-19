@@ -304,6 +304,18 @@ export default function HealthFitnessTracker() {
     );
   }, [state.workoutLogs]);
 
+  const waterTrend = useMemo(() => {
+  return groupByDay(state.waterLogs, "timestamp", (prev, log) => ({
+    date: String(log.timestamp || "").slice(0, 10),
+    ounces: Number(prev.ounces || 0) + Number(log.ounces || 0),
+    goal: Number(state.goals.water || 0),
+  }));
+}, [state.waterLogs, state.goals]);
+
+const latestWeight = useMemo(() => {
+  return state.weightLogs?.[0] || null;
+}, [state.weightLogs]);
+  
   const workoutPlanCompliance = useMemo(() => {
     const plannedToday = state.workoutPlan.some((item) => item.day === appDayFromDate());
     const uniquePlannedDays = new Set(state.workoutPlan.map((item) => item.day));
@@ -602,6 +614,189 @@ export default function HealthFitnessTracker() {
     setSaveMessage("Exercise / sleep entry saved.");
   }
 
+  function editFoodLog(id) {
+  const log = state.foodLogs.find((item) => item.id === id);
+  if (!log) return;
+
+  const name = window.prompt("Entry name", log.name || "");
+  if (name === null) return;
+
+  const calories = window.prompt("Calories", String(log.totals?.calories ?? 0));
+  if (calories === null) return;
+
+  const protein = window.prompt("Protein", String(log.totals?.protein ?? 0));
+  if (protein === null) return;
+
+  const carbs = window.prompt("Carbs", String(log.totals?.carbs ?? 0));
+  if (carbs === null) return;
+
+  const fat = window.prompt("Fat", String(log.totals?.fat ?? 0));
+  if (fat === null) return;
+
+  setState((prev) => ({
+    ...prev,
+    foodLogs: prev.foodLogs.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            name,
+            totals: {
+              ...item.totals,
+              calories: Number(calories || 0),
+              protein: Number(protein || 0),
+              carbs: Number(carbs || 0),
+              fat: Number(fat || 0),
+            },
+          }
+        : item
+    ),
+  }));
+
+  setSaveMessage("Food entry updated.");
+}
+
+function deleteFoodLog(id) {
+  setState((prev) => ({
+    ...prev,
+    foodLogs: prev.foodLogs.filter((item) => item.id !== id),
+  }));
+  setSaveMessage("Food entry deleted.");
+}
+
+function editWaterLog(id) {
+  const log = state.waterLogs.find((item) => item.id === id);
+  if (!log) return;
+
+  const ounces = window.prompt("Water in oz", String(log.ounces ?? 0));
+  if (ounces === null) return;
+
+  setState((prev) => ({
+    ...prev,
+    waterLogs: prev.waterLogs.map((item) =>
+      item.id === id ? { ...item, ounces: Number(ounces || 0) } : item
+    ),
+  }));
+
+  setSaveMessage("Water entry updated.");
+}
+
+function deleteWaterLog(id) {
+  setState((prev) => ({
+    ...prev,
+    waterLogs: prev.waterLogs.filter((item) => item.id !== id),
+  }));
+  setSaveMessage("Water entry deleted.");
+}
+
+function editWorkoutSession(id) {
+  const session = state.workoutSessions.find((item) => item.id === id);
+  if (!session) return;
+
+  const notes = window.prompt("Workout notes", session.notes || "");
+  if (notes === null) return;
+
+  setState((prev) => ({
+    ...prev,
+    workoutSessions: prev.workoutSessions.map((item) =>
+      item.id === id ? { ...item, notes } : item
+    ),
+  }));
+
+  setSaveMessage("Workout session updated.");
+}
+
+function deleteWorkoutSession(id) {
+  const session = state.workoutSessions.find((item) => item.id === id);
+  if (!session) return;
+
+  const sessionDate = String(session.timestamp || "").slice(0, 10);
+
+  setState((prev) => ({
+    ...prev,
+    workoutSessions: prev.workoutSessions.filter((item) => item.id !== id),
+    workoutLogs: prev.workoutLogs.filter(
+      (log) => String(log.timestamp || "").slice(0, 10) !== sessionDate
+    ),
+  }));
+
+  setSaveMessage("Workout session deleted.");
+}
+
+function editNoteLog(id) {
+  const log = state.noteLogs.find((item) => item.id === id);
+  if (!log) return;
+
+  const note = window.prompt("Edit note", log.note || "");
+  if (note === null) return;
+
+  setState((prev) => ({
+    ...prev,
+    noteLogs: prev.noteLogs.map((item) =>
+      item.id === id ? { ...item, note } : item
+    ),
+  }));
+
+  setSaveMessage("Note updated.");
+}
+
+function deleteNoteLog(id) {
+  setState((prev) => ({
+    ...prev,
+    noteLogs: prev.noteLogs.filter((item) => item.id !== id),
+  }));
+  setSaveMessage("Note deleted.");
+}
+
+function editSleepLog(id) {
+  const log = state.sleepLogs.find((item) => item.id === id);
+  if (!log) return;
+
+  const hours = window.prompt("Sleep hours", String(log.hours ?? 0));
+  if (hours === null) return;
+
+  setState((prev) => ({
+    ...prev,
+    sleepLogs: prev.sleepLogs.map((item) =>
+      item.id === id ? { ...item, hours: Number(hours || 0) } : item
+    ),
+  }));
+
+  setSaveMessage("Sleep entry updated.");
+}
+
+function deleteSleepLog(id) {
+  setState((prev) => ({
+    ...prev,
+    sleepLogs: prev.sleepLogs.filter((item) => item.id !== id),
+  }));
+  setSaveMessage("Sleep entry deleted.");
+}
+
+function editWeightLog(id) {
+  const log = state.weightLogs.find((item) => item.id === id);
+  if (!log) return;
+
+  const weight = window.prompt("Weight in lb", String(log.weight ?? 0));
+  if (weight === null) return;
+
+  setState((prev) => ({
+    ...prev,
+    weightLogs: prev.weightLogs.map((item) =>
+      item.id === id ? { ...item, weight: Number(weight || 0) } : item
+    ),
+  }));
+
+  setSaveMessage("Weight entry updated.");
+}
+
+function deleteWeightLog(id) {
+  setState((prev) => ({
+    ...prev,
+    weightLogs: prev.weightLogs.filter((item) => item.id !== id),
+  }));
+  setSaveMessage("Weight entry deleted.");
+}
+  
   function goToTab(tabKey) {
     setActiveTab(tabKey);
     setMobileMenuOpen(false);
@@ -722,76 +917,269 @@ export default function HealthFitnessTracker() {
         </div>
 
         {activeTab === "dashboard" && (
-          <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-              <StatTile label="Calories" value={Math.round(todayMacros.calories)} subtext={`Goal ${state.goals.calories}`} accent="bg-amber-50 border-amber-100" />
-              <StatTile label="Protein" value={`${Math.round(todayMacros.protein)} g`} subtext={`Goal ${state.goals.protein} g`} accent="bg-emerald-50 border-emerald-100" />
-              <StatTile label="Carbs" value={`${Math.round(todayMacros.carbs)} g`} subtext={`Goal ${state.goals.carbs} g`} accent="bg-sky-50 border-sky-100" />
-              <StatTile label="Fat" value={`${Math.round(todayMacros.fat)} g`} subtext={`Goal ${state.goals.fat} g`} accent="bg-rose-50 border-rose-100" />
-              <StatTile label="Workout to Plan" value={workoutPlanCompliance.plannedToday ? (workoutPlanCompliance.completedToday ? "Done" : "Due") : "Rest"} subtext={`${workoutPlanCompliance.completedPlannedDays} of ${workoutPlanCompliance.plannedDays || 0} planned day-types hit`} accent="bg-violet-50 border-violet-100" />
-              <StatTile label="Water Intake" value={`${Math.round(todaysWater)} oz`} subtext={`Goal ${state.goals.water} oz`} accent="bg-cyan-50 border-cyan-100" />
-            </div>
-            <div className="grid gap-4 xl:grid-cols-2">
-              <AppSection title="Calories Trend"><div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={macroTrend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis /><Tooltip /><Legend /><Line type="monotone" dataKey="calories" stroke="#f59e0b" strokeWidth={2} name="Calories" /><Line type="monotone" dataKey="goalCalories" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" /></LineChart></ResponsiveContainer></div></AppSection>
-              <AppSection title="Protein Trend"><div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={macroTrend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis /><Tooltip /><Legend /><Line type="monotone" dataKey="protein" stroke="#10b981" strokeWidth={2} name="Protein" /><Line type="monotone" dataKey="goalProtein" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" /></LineChart></ResponsiveContainer></div></AppSection>
-              <AppSection title="Carbs Trend"><div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={macroTrend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis /><Tooltip /><Legend /><Line type="monotone" dataKey="carbs" stroke="#0ea5e9" strokeWidth={2} name="Carbs" /><Line type="monotone" dataKey="goalCarbs" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" /></LineChart></ResponsiveContainer></div></AppSection>
-              <AppSection title="Fat Trend"><div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={macroTrend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis /><Tooltip /><Legend /><Line type="monotone" dataKey="fat" stroke="#f43f5e" strokeWidth={2} name="Fat" /><Line type="monotone" dataKey="goalFat" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" /></LineChart></ResponsiveContainer></div></AppSection>
-              <AppSection title="Sleep Trend"><div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={sleepTrend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis /><Tooltip /><Legend /><Bar dataKey="hours" fill="#8b5cf6" name="Sleep Hours" /><Line type="monotone" dataKey="goal" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" /></BarChart></ResponsiveContainer></div></AppSection>
-              <AppSection title="Weight Trend"><div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><LineChart data={weightTrend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis domain={["dataMin - 2", "dataMax + 2"]} /><Tooltip /><Line type="monotone" dataKey="weight" stroke="#7c3aed" strokeWidth={3} name="Weight (lb)" /></LineChart></ResponsiveContainer></div></AppSection>
-              <AppSection title="Lifting Trend"><div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={liftingTrend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis /><Tooltip /><Legend /><Bar dataKey="volume" fill="#1d4ed8" name="Volume" /><Bar dataKey="sets" fill="#60a5fa" name="Sets" /></BarChart></ResponsiveContainer></div></AppSection>
-              <AppSection title="Cardio Trend"><div className="h-[280px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={cardioTrend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis /><Tooltip /><Legend /><Bar dataKey="minutes" fill="#10b981" name="Minutes" /><Bar dataKey="calories" fill="#34d399" name="Calories" /></BarChart></ResponsiveContainer></div></AppSection>
-            </div>
-          </div>
-        )}
+  <div className="space-y-6">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <StatTile label="Calories" value={Math.round(todayMacros.calories)} subtext={`Goal ${state.goals.calories}`} accent="bg-amber-50 border-amber-100" />
+      <StatTile label="Protein" value={`${Math.round(todayMacros.protein)} g`} subtext={`Goal ${state.goals.protein} g`} accent="bg-emerald-50 border-emerald-100" />
+      <StatTile label="Carbs" value={`${Math.round(todayMacros.carbs)} g`} subtext={`Goal ${state.goals.carbs} g`} accent="bg-sky-50 border-sky-100" />
+      <StatTile label="Fat" value={`${Math.round(todayMacros.fat)} g`} subtext={`Goal ${state.goals.fat} g`} accent="bg-rose-50 border-rose-100" />
+      <StatTile label="Workout to Plan" value={workoutPlanCompliance.plannedToday ? (workoutPlanCompliance.completedToday ? "Done" : "Due") : "Rest"} subtext={`${workoutPlanCompliance.completedPlannedDays} of ${workoutPlanCompliance.plannedDays || 0} planned day-types hit`} accent="bg-violet-50 border-violet-100" />
+      <StatTile label="Water Intake" value={`${Math.round(todaysWater)} oz`} subtext={`Goal ${state.goals.water} oz`} accent="bg-cyan-50 border-cyan-100" />
+    </div>
+
+    <div className="grid gap-4 xl:grid-cols-2">
+      <AppSection title="Calories Trend">
+        <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={macroTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="calories" stroke="#f59e0b" strokeWidth={2} name="Calories" />
+              <Line type="monotone" dataKey="goalCalories" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </AppSection>
+
+      <AppSection title="Protein Trend">
+        <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={macroTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="protein" stroke="#10b981" strokeWidth={2} name="Protein" />
+              <Line type="monotone" dataKey="goalProtein" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </AppSection>
+
+      <AppSection title="Carbs Trend">
+        <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={macroTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="carbs" stroke="#0ea5e9" strokeWidth={2} name="Carbs" />
+              <Line type="monotone" dataKey="goalCarbs" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </AppSection>
+
+      <AppSection title="Fat Trend">
+        <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={macroTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="fat" stroke="#f43f5e" strokeWidth={2} name="Fat" />
+              <Line type="monotone" dataKey="goalFat" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </AppSection>
+
+      <AppSection title="Lifting Trend">
+        <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={liftingTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="volume" fill="#1d4ed8" name="Volume" />
+              <Bar dataKey="sets" fill="#60a5fa" name="Sets" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </AppSection>
+
+      <AppSection title="Cardio Trend">
+        <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={cardioTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="minutes" fill="#10b981" name="Minutes" />
+              <Bar dataKey="calories" fill="#34d399" name="Calories" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </AppSection>
+
+      <AppSection title="Water Intake Trend">
+        <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={waterTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="ounces" fill="#06b6d4" name="Water (oz)" />
+              <Line type="monotone" dataKey="goal" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </AppSection>
+
+      <AppSection title="Sleep Trend">
+        <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={sleepTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="hours" fill="#8b5cf6" name="Sleep Hours" />
+              <Line type="monotone" dataKey="goal" stroke="#9ca3af" strokeDasharray="4 4" name="Goal" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </AppSection>
+    </div>
+
+    <AppSection title="Latest Weight">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+        <div className="text-sm text-slate-500">Most recent log</div>
+        <div className="mt-2 text-3xl font-semibold text-slate-900">
+          {latestWeight?.weight ? `${latestWeight.weight} lb` : "—"}
+        </div>
+        <div className="mt-2 text-sm text-slate-500">
+          {latestWeight?.timestamp ? new Date(latestWeight.timestamp).toLocaleString() : "No weight entry yet"}
+        </div>
+      </div>
+    </AppSection>
+  </div>
+)}
 
         {activeTab === "log" && (
   <div className="grid gap-4 xl:grid-cols-3">
-    <AppSection title="Recent Food Logs">
-      <div className="grid max-h-[700px] gap-3 overflow-auto pr-1">
-        {state.foodLogs.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-            No food logs yet.
-          </div>
-        ) : (
-          state.foodLogs.slice(0, 12).map((log) => (
-            <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="font-medium text-slate-900">{log.name}</div>
-              <div className="mt-1 text-sm text-slate-600">
-                {Math.round(log.totals?.calories || 0)} cal • P {Math.round(log.totals?.protein || 0)} • C{" "}
-                {Math.round(log.totals?.carbs || 0)} • F {Math.round(log.totals?.fat || 0)}
-              </div>
-              <div className="mt-1 text-xs text-slate-500">
-                Logged {new Date(log.timestamp).toLocaleString()}
-              </div>
-
-              {(log.items || []).length > 0 && (
-                <div className="mt-2 space-y-1 text-sm text-slate-600">
-                  {log.items.map((item, idx) => (
-                    <div key={`${log.id}_${idx}`}>
-                      • {item.quantity} × {item.foodName || item.foodId} ({item.servingLabel || "serving"})
-                    </div>
-                  ))}
-                </div>
-              )}
+    {/* Column 1: Food + Water */}
+    <div className="space-y-4">
+      <AppSection title="Recent Food Logs">
+        <div className="grid max-h-[420px] gap-3 overflow-auto pr-1">
+          {state.foodLogs.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              No food logs yet.
             </div>
-          ))
-        )}
-      </div>
-    </AppSection>
+          ) : (
+            state.foodLogs.slice(0, 12).map((log) => (
+              <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-slate-900">{log.name}</div>
+                    <div className="mt-1 text-sm text-slate-600">
+                      {Math.round(log.totals?.calories || 0)} cal • P {Math.round(log.totals?.protein || 0)} • C {Math.round(log.totals?.carbs || 0)} • F {Math.round(log.totals?.fat || 0)}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Logged {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                  </div>
 
-    <div className="space-y-4 xl:col-span-1">
-      <AppSection title="Recent Workout Sessions">
+                  <div className="flex flex-col gap-2">
+                    <button onClick={() => editFoodLog(log.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100">
+                      Edit
+                    </button>
+                    <button onClick={() => deleteFoodLog(log.id)} className="rounded-xl border border-rose-200 bg-white px-3 py-1 text-sm text-rose-600 hover:bg-rose-50">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                {(log.items || []).length > 0 && (
+                  <div className="mt-2 space-y-1 text-sm text-slate-600">
+                    {log.items.map((item, idx) => (
+                      <div key={`${log.id}_${idx}`}>
+                        • {item.quantity} × {item.foodName || item.foodId} ({item.servingLabel || "serving"})
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </AppSection>
+
+      <AppSection title="Recent Water Logs">
         <div className="grid max-h-[240px] gap-3 overflow-auto pr-1">
+          {state.waterLogs.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              No water logs yet.
+            </div>
+          ) : (
+            state.waterLogs.slice(0, 10).map((log) => (
+              <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-slate-900">{log.ounces} oz</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <button onClick={() => editWaterLog(log.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100">
+                      Edit
+                    </button>
+                    <button onClick={() => deleteWaterLog(log.id)} className="rounded-xl border border-rose-200 bg-white px-3 py-1 text-sm text-rose-600 hover:bg-rose-50">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </AppSection>
+    </div>
+
+    {/* Column 2: Workouts */}
+    <div className="space-y-4">
+      <AppSection title="Recent Workout Sessions">
+        <div className="grid max-h-[700px] gap-3 overflow-auto pr-1">
           {state.workoutSessions.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
               No workout sessions yet.
             </div>
           ) : (
-            state.workoutSessions.slice(0, 8).map((session) => (
+            state.workoutSessions.slice(0, 10).map((session) => (
               <div key={session.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
-                <div className="font-medium text-slate-900">{session.day || "Workout Session"}</div>
-                <div className="mt-1 text-xs text-slate-500">
-                  {new Date(session.timestamp).toLocaleString()}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-slate-900">{session.day || "Workout Session"}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {new Date(session.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <button onClick={() => editWorkoutSession(session.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100">
+                      Edit
+                    </button>
+                    <button onClick={() => deleteWorkoutSession(session.id)} className="rounded-xl border border-rose-200 bg-white px-3 py-1 text-sm text-rose-600 hover:bg-rose-50">
+                      Delete
+                    </button>
+                  </div>
                 </div>
 
                 {(session.summary || []).length > 0 && (
@@ -812,9 +1200,12 @@ export default function HealthFitnessTracker() {
           )}
         </div>
       </AppSection>
+    </div>
 
+    {/* Column 3: Notes + Sleep + Weight */}
+    <div className="space-y-4">
       <AppSection title="Recent Notes">
-        <div className="grid max-h-[180px] gap-3 overflow-auto pr-1">
+        <div className="grid max-h-[220px] gap-3 overflow-auto pr-1">
           {state.noteLogs.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
               No notes yet.
@@ -822,33 +1213,90 @@ export default function HealthFitnessTracker() {
           ) : (
             state.noteLogs.slice(0, 8).map((log) => (
               <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
-                <div className="text-xs text-slate-500">
-                  {new Date(log.timestamp).toLocaleString()}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs text-slate-500">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                    <div className="mt-1 text-slate-700">{log.note}</div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <button onClick={() => editNoteLog(log.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100">
+                      Edit
+                    </button>
+                    <button onClick={() => deleteNoteLog(log.id)} className="rounded-xl border border-rose-200 bg-white px-3 py-1 text-sm text-rose-600 hover:bg-rose-50">
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-1 text-slate-700">{log.note}</div>
               </div>
             ))
           )}
         </div>
       </AppSection>
 
-      <AppSection title="Water / Sleep / Weight Snapshot">
-        <div className="space-y-3 text-sm">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            Water today: <span className="font-medium">{Math.round(todaysWater)} oz</span>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            Latest sleep:{" "}
-            <span className="font-medium">
-              {state.sleepLogs?.[0]?.hours ? `${state.sleepLogs[0].hours} hours` : "—"}
-            </span>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            Latest weight:{" "}
-            <span className="font-medium">
-              {state.weightLogs?.[0]?.weight ? `${state.weightLogs[0].weight} lb` : "—"}
-            </span>
-          </div>
+      <AppSection title="Recent Sleep Logs">
+        <div className="grid max-h-[200px] gap-3 overflow-auto pr-1">
+          {state.sleepLogs.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              No sleep logs yet.
+            </div>
+          ) : (
+            state.sleepLogs.slice(0, 8).map((log) => (
+              <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-slate-900">{log.hours} hours</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <button onClick={() => editSleepLog(log.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100">
+                      Edit
+                    </button>
+                    <button onClick={() => deleteSleepLog(log.id)} className="rounded-xl border border-rose-200 bg-white px-3 py-1 text-sm text-rose-600 hover:bg-rose-50">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </AppSection>
+
+      <AppSection title="Recent Weight Logs">
+        <div className="grid max-h-[200px] gap-3 overflow-auto pr-1">
+          {state.weightLogs.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              No weight logs yet.
+            </div>
+          ) : (
+            state.weightLogs.slice(0, 8).map((log) => (
+              <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-slate-900">{log.weight} lb</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <button onClick={() => editWeightLog(log.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100">
+                      Edit
+                    </button>
+                    <button onClick={() => deleteWeightLog(log.id)} className="rounded-xl border border-rose-200 bg-white px-3 py-1 text-sm text-rose-600 hover:bg-rose-50">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </AppSection>
     </div>
