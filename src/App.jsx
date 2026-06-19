@@ -376,13 +376,145 @@ export default function HealthFitnessTracker() {
     }
   }, [quickFoodId, quickFoodServingId, foodsById]);
 
+    exercisesForDay.forEach((exercise) => {
+      if (exercise.type === "cardio") {
+        nextDraft[exercise.id] = workoutDraft[exercise.id] || {
+          minutes: exercise.targetTime || "",
+          calories: exercise.targetCalories || "",
+        };
+      } else {
+        const targetSets = Math.max(1, Number(exercise.targetSets || 1));
+        const existingSets = workoutDraft[exercise.id]?.sets || [];
+
+        nextDraft[exercise.id] = {
+          sets: Array.from({ length: targetSets }, (_, idx) => {
+            return existingSets[idx] || {
+              reps: exercise.targetReps || "",
+              weight: "",
+            };
+          }),
+        };
+      }
+    });
+
+    setWorkoutDraft(nextDraft);
+  }, [selectedWorkoutDay, state.workoutPlan]);
+
   useEffect(() => {
     if (!saveMessage) return;
     const timer = setTimeout(() => setSaveMessage(""), 2200);
     return () => clearTimeout(timer);
   }, [saveMessage]);
 
-    function saveExerciseSleepEntry() {
+  function saveFoodWeightEntry() {
+    let nextState = { ...state };
+    let didAnything = false;
+
+    if (quickFoodId && quickFoodServingId) {
+      const food = foodsById[quickFoodId];
+      const serving = food?.servings?.find((s) => s.id === quickFoodServingId);
+
+      if (food && serving) {
+        const qty = Number(quickFoodQty || 1);
+        const foodLog = {
+          id: uid(),
+          name: `${food.name} (${serving.label})`,
+          items: [
+            {
+              id: uid(),
+              foodId: food.id,
+              foodName: food.name,
+              servingId: serving.id,
+              servingLabel: serving.label,
+              quantity: qty,
+            },
+          ],
+          totals: {
+            calories: Number(serving.calories || 0) * qty,
+            protein: Number(serving.protein || 0) * qty,
+            carbs: Number(serving.carbs || 0) * qty,
+            fat: Number(serving.fat || 0) * qty,
+          },
+          timestamp: new Date().toISOString(),
+        };
+
+        nextState.foodLogs = [foodLog, ...(nextState.foodLogs || [])];
+        didAnything = true;
+      }
+    }
+
+    if (quickMealId) {
+      const meal = (nextState.mealTemplates || []).find((m) => m.id === quickMealId);
+      if (meal) {
+        const mealLog = {
+          id: uid(),
+          name: meal.name,
+          items: (meal.itemSnapshots || []).map((item) => ({
+            ...item,
+            id: uid(),
+          })),
+          totals: { ...(meal.totals || {}) },
+          timestamp: new Date().toISOString(),
+        };
+
+        nextState.foodLogs = [mealLog, ...(nextState.foodLogs || [])];
+        didAnything = true;
+      }
+    }
+
+    const water = Number(waterAmount || 0);
+    if (water) {
+      nextState.waterLogs = [
+        {
+          id: uid(),
+          ounces: water,
+          timestamp: new Date().toISOString(),
+        },
+        ...(nextState.waterLogs || []),
+      ];
+      didAnything = true;
+    }
+
+    const note = dailyNote.trim();
+    if (note) {
+      nextState.noteLogs = [
+        {
+          id: uid(),
+          note,
+          timestamp: new Date().toISOString(),
+        },
+        ...(nextState.noteLogs || []),
+      ];
+      didAnything = true;
+    }
+
+    const weight = Number(weightValue || 0);
+    if (weight) {
+      nextState.weightLogs = [
+        {
+          id: uid(),
+          weight,
+          timestamp: new Date().toISOString(),
+        },
+        ...(nextState.weightLogs || []),
+      ];
+      didAnything = true;
+    }
+
+    if (!didAnything) return;
+
+    setState(nextState);
+    setQuickFoodId("");
+    setQuickFoodServingId("");
+    setQuickFoodQty(1);
+    setQuickMealId("");
+    setWaterAmount("");
+    setWeightValue("");
+    setDailyNote("");
+    setSaveMessage("Food / weight entry saved.");
+  }
+
+  function saveExerciseSleepEntry() {
     let nextState = { ...state };
     let didAnything = false;
     const workoutEntries = [];
@@ -493,114 +625,6 @@ export default function HealthFitnessTracker() {
     setWorkoutNotes("");
     setSaveMessage("Exercise / sleep entry saved.");
   }
-
-    if (quickMealId) {
-      const meal = (nextState.mealTemplates || []).find((m) => m.id === quickMealId);
-      if (meal) {
-        const mealLog = {
-          id: uid(),
-          name: meal.name,
-          items: (meal.itemSnapshots || []).map((item) => ({
-            ...item,
-            id: uid(),
-          })),
-          totals: { ...(meal.totals || {}) },
-          timestamp: new Date().toISOString(),
-        };
-
-        nextState.foodLogs = [mealLog, ...(nextState.foodLogs || [])];
-        didAnything = true;
-      }
-    }
-
-    const water = Number(waterAmount || 0);
-    if (water) {
-      nextState.waterLogs = [
-        {
-          id: uid(),
-          ounces: water,
-          timestamp: new Date().toISOString(),
-        },
-        ...(nextState.waterLogs || []),
-      ];
-      didAnything = true;
-    }
-
-    const note = dailyNote.trim();
-    if (note) {
-      nextState.noteLogs = [
-        {
-          id: uid(),
-          note,
-          timestamp: new Date().toISOString(),
-        },
-        ...(nextState.noteLogs || []),
-      ];
-      didAnything = true;
-    }
-
-    const weight = Number(weightValue || 0);
-    if (weight) {
-      nextState.weightLogs = [
-        {
-          id: uid(),
-          weight,
-          timestamp: new Date().toISOString(),
-        },
-        ...(nextState.weightLogs || []),
-      ];
-      didAnything = true;
-    }
-
-    if (!didAnything) return;
-
-    setState(nextState);
-    setQuickFoodId("");
-    setQuickFoodServingId("");
-    setQuickFoodQty(1);
-    setQuickMealId("");
-    setWaterAmount("");
-    setWeightValue("");
-    setDailyNote("");
-    setSaveMessage("Food / weight entry saved.");
-  }
-
-  function saveFoodWeightEntry() {
-    let nextState = { ...state };
-    let didAnything = false;
-
-    if (quickFoodId && quickFoodServingId) {
-      const food = foodsById[quickFoodId];
-      const serving = food?.servings?.find((s) => s.id === quickFoodServingId);
-
-      if (food && serving) {
-        const qty = Number(quickFoodQty || 1);
-        const foodLog = {
-          id: uid(),
-          name: `${food.name} (${serving.label})`,
-          items: [
-            {
-              id: uid(),
-              foodId: food.id,
-              foodName: food.name,
-              servingId: serving.id,
-              servingLabel: serving.label,
-              quantity: qty,
-            },
-          ],
-          totals: {
-            calories: Number(serving.calories || 0) * qty,
-            protein: Number(serving.protein || 0) * qty,
-            carbs: Number(serving.carbs || 0) * qty,
-            fat: Number(serving.fat || 0) * qty,
-          },
-          timestamp: new Date().toISOString(),
-        };
-
-        nextState.foodLogs = [foodLog, ...(nextState.foodLogs || [])];
-        didAnything = true;
-      }
-    }
 
   function goToTab(tabKey) {
     setActiveTab(tabKey);
