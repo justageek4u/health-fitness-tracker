@@ -190,6 +190,14 @@ export default function HealthFitnessTracker() {
   const [weightValue, setWeightValue] = useState("");
   const [dailyNote, setDailyNote] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  const [selectedWorkoutDay, setSelectedWorkoutDay] = useState(appDayFromDate());
+  const [workoutDraft, setWorkoutDraft] = useState({});
+  const [workoutNotes, setWorkoutNotes] = useState("");
+  const [sleepEntryDate, setSleepEntryDate] = useState(
+    new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  );
+  const [sleepEntryHours, setSleepEntryHours] = useState("");
+
   
   useEffect(() => {
     saveState(state);
@@ -312,6 +320,44 @@ export default function HealthFitnessTracker() {
     };
   }, [state.workoutPlan, state.workoutSessions, todaysWorkoutSession]);
 
+  const exercisesForDay = useMemo(() => {
+    return (state.workoutPlan || []).filter((item) => item.day === selectedWorkoutDay);
+  }, [state.workoutPlan, selectedWorkoutDay]);
+
+  useEffect(() => {
+    const nextDraft = {};
+
+    exercisesForDay.forEach((exercise) => {
+      if (exercise.type === "cardio") {
+        nextDraft[exercise.id] = workoutDraft[exercise.id] || {
+          minutes: exercise.targetTime || "",
+          calories: exercise.targetCalories || "",
+        };
+      } else {
+        const targetSets = Math.max(1, Number(exercise.targetSets || 1));
+        const existingSets = workoutDraft[exercise.id]?.sets || [];
+
+        nextDraft[exercise.id] = {
+          sets: Array.from({ length: targetSets }, (_, idx) => {
+            return existingSets[idx] || {
+              reps: exercise.targetReps || "",
+              weight: "",
+            };
+          }),
+        };
+      }
+    });
+
+    setWorkoutDraft(nextDraft);
+  }, [selectedWorkoutDay, state.workoutPlan]);
+
+  useEffect(() => {
+    const existingSleep = (state.sleepLogs || []).find(
+      (log) => String(log.timestamp || "").slice(0, 10) === sleepEntryDate
+    );
+    setSleepEntryHours(existingSleep?.hours ? String(existingSleep.hours) : "");
+  }, [sleepEntryDate, state.sleepLogs]);
+  
   const foodsById = useMemo(() => {
     return Object.fromEntries((state.foods || []).map((food) => [food.id, food]));
   }, [state.foods]);
@@ -372,6 +418,118 @@ export default function HealthFitnessTracker() {
         didAnything = true;
       }
     }
+
+    function saveExerciseSleepEntry() {
+    let nextState = { ...state };
+    let didAnything = false;
+    const workoutEntries = [];
+    const sessionSummary = [];
+
+    exercisesForDay.forEach((exercise) => {
+      const draft = workoutDraft[exercise.id];
+      if (!draft) return;
+
+      if (exercise.type === "cardio") {
+        const minutes = Number(draft.minutes || 0);
+        const calories = Number(draft.calories || 0);
+
+        if (!minutes && !calories) return;
+
+        workoutEntries.push({
+          id: uid(),
+          exerciseId: exercise.id,
+          exercise: exercise.exercise,
+          type: "cardio",
+          minutes,
+          cardioCalories: calories,
+          day: selectedWorkoutDay,
+          timestamp: new Date().toISOString(),
+        });
+
+        sessionSummary.push(`${exercise.exercise}: ${minutes || 0} min / ${calories || 0} cal`);
+      } else {
+        const sets = draft.sets || [];
+        let completedSets = 0;
+
+        sets.forEach((setRow, idx) => {
+          const reps = Number(setRow.reps || 0);
+          const weight = Number(setRow.weight || 0);
+
+          if (!reps && !weight) return;
+
+          completedSets += 1;
+
+          workoutEntries.push({
+            id: uid(),
+            exerciseId: exercise.id,
+            exercise: exercise.exercise,
+            type: "set",
+            setNumber: idx + 1,
+            reps,
+            weight,
+            day: selectedWorkoutDay,
+            timestamp: new Date().toISOString(),
+          });
+        });
+
+        if (completedSets > 0) {
+          sessionSummary.push(`${exercise.exercise}: ${completedSets} set(s)`);
+        }
+      }
+    });
+
+    if (workoutEntries.length > 0) {
+      const workoutSession = {
+        id: uid(),
+        day: selectedWorkoutDay,
+        timestamp: new Date().toISOString(),
+        notes: workoutNotes.trim(),
+        summary: sessionSummary,
+      };
+
+      nextState.workoutLogs = [...workoutEntries.reverse(), ...(nextState.workoutLogs || [])];
+      nextState.workoutSessions = [
+        workoutSession,
+        ...(nextState.workoutSessions || []).filter(
+          (session) => String(session.timestamp || "").slice(0, 10) !== todayKey()
+        ),
+      ];
+
+      didAnything = true;
+    }
+
+    const sleepHours = Number(sleepEntryHours || 0);
+    if (sleepEntryDate && sleepHours) {
+      const existingSleepIndex = (nextState.sleepLogs || []).findIndex(
+        (log) => String(log.timestamp || "").slice(0, 10) === sleepEntryDate
+      );
+
+      if (existingSleepIndex >= 0) {
+        nextState.sleepLogs = [...(nextState.sleepLogs || [])];
+        nextState.sleepLogs[existingSleepIndex] = {
+          ...nextState.sleepLogs[existingSleepIndex],
+          hours: sleepHours,
+        };
+      } else {
+        nextState.sleepLogs = [
+          {
+            id: uid(),
+            hours: sleepHours,
+            timestamp: `${sleepEntryDate}T07:00:00.000Z`,
+          },
+          ...(nextState.sleepLogs || []),
+        ];
+      }
+
+      didAnything = true;
+    }
+
+    if (!didAnything) return;
+
+    setState(nextState);
+    setWorkoutNotes("");
+    setSaveMessage("Exercise / sleep entry saved.");
+  }
 
     if (quickMealId) {
       const meal = (nextState.mealTemplates || []).find((m) => m.id === quickMealId);
@@ -806,7 +964,177 @@ export default function HealthFitnessTracker() {
     </div>
   </div>
 )}
-        {activeTab === "exerciseSleepEntry" && <PlaceholderPanel title="Exercise & Sleep Entry" description="Next section to implement: whole-workout entry screen, workout notes, and previous-night sleep entry/edit." />}
+        {activeTab === "exerciseSleepEntry" && (
+  <div className="space-y-4">
+    <div className="grid gap-4 xl:grid-cols-[1.25fr,0.75fr]">
+      <AppSection title={`Exercise Entry — ${selectedWorkoutDay}`}>
+        <div className="space-y-4">
+          <div className="max-w-xs">
+            <label className="mb-2 block text-sm font-medium text-slate-700">Workout Day</label>
+            <select
+              className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
+              value={selectedWorkoutDay}
+              onChange={(e) => setSelectedWorkoutDay(e.target.value)}
+            >
+              {days.map((day) => (
+                <option key={day} value={day}>
+                  {day}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {exercisesForDay.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">
+              No exercises are planned for this day.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {exercisesForDay.map((exercise) => (
+                <div key={exercise.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="font-medium text-slate-900">{exercise.exercise}</div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {exercise.type === "cardio"
+                      ? `Cardio target: ${exercise.targetTime || 0} min / ${exercise.targetCalories || 0} cal`
+                      : `Target: ${exercise.targetSets || 0} sets × ${exercise.targetReps || 0} reps`}
+                  </div>
+
+                  {exercise.notes ? (
+                    <div className="mt-1 text-sm text-slate-500">{exercise.notes}</div>
+                  ) : null}
+
+                  {exercise.type === "cardio" ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <input
+                        type="number"
+                        className="rounded-2xl border border-slate-300 px-3 py-3"
+                        placeholder="Minutes"
+                        value={workoutDraft[exercise.id]?.minutes ?? ""}
+                        onChange={(e) =>
+                          setWorkoutDraft((prev) => ({
+                            ...prev,
+                            [exercise.id]: {
+                              ...(prev[exercise.id] || {}),
+                              minutes: e.target.value,
+                            },
+                          }))
+                        }
+                      />
+                      <input
+                        type="number"
+                        className="rounded-2xl border border-slate-300 px-3 py-3"
+                        placeholder="Calories"
+                        value={workoutDraft[exercise.id]?.calories ?? ""}
+                        onChange={(e) =>
+                          setWorkoutDraft((prev) => ({
+                            ...prev,
+                            [exercise.id]: {
+                              ...(prev[exercise.id] || {}),
+                              calories: e.target.value,
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {(workoutDraft[exercise.id]?.sets || []).map((setRow, idx) => (
+                        <div
+                          key={`${exercise.id}_${idx}`}
+                          className="grid gap-3 rounded-2xl border border-white bg-white p-3 sm:grid-cols-[90px,1fr,1fr] sm:items-center"
+                        >
+                          <div className="text-sm font-medium text-slate-700">Set {idx + 1}</div>
+                          <input
+                            type="number"
+                            className="rounded-2xl border border-slate-300 px-3 py-2"
+                            placeholder="Reps"
+                            value={setRow.reps}
+                            onChange={(e) =>
+                              setWorkoutDraft((prev) => ({
+                                ...prev,
+                                [exercise.id]: {
+                                  sets: prev[exercise.id].sets.map((row, setIdx) =>
+                                    setIdx === idx ? { ...row, reps: e.target.value } : row
+                                  ),
+                                },
+                              }))
+                            }
+                          />
+                          <input
+                            type="number"
+                            className="rounded-2xl border border-slate-300 px-3 py-2"
+                            placeholder="Weight"
+                            value={setRow.weight}
+                            onChange={(e) =>
+                              setWorkoutDraft((prev) => ({
+                                ...prev,
+                                [exercise.id]: {
+                                  sets: prev[exercise.id].sets.map((row, setIdx) =>
+                                    setIdx === idx ? { ...row, weight: e.target.value } : row
+                                  ),
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </AppSection>
+
+      <AppSection title="Sleep Entry">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-medium text-slate-800">Previous Night Sleep</div>
+            <div className="mt-3 space-y-3">
+              <input
+                type="date"
+                value={sleepEntryDate}
+                onChange={(e) => setSleepEntryDate(e.target.value)}
+                className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+              />
+              <input
+                type="number"
+                step="0.25"
+                min="0"
+                value={sleepEntryHours}
+                onChange={(e) => setSleepEntryHours(e.target.value)}
+                className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+                placeholder="Hours slept"
+              />
+            </div>
+            <div className="mt-3 text-sm text-slate-500">
+              Enter or edit sleep for the previous night before saving.
+            </div>
+          </div>
+        </div>
+      </AppSection>
+    </div>
+
+    <AppSection title="Workout Notes">
+      <textarea
+        value={workoutNotes}
+        onChange={(e) => setWorkoutNotes(e.target.value)}
+        className="min-h-[120px] w-full rounded-2xl border border-slate-300 p-3"
+        placeholder="How did the workout feel? Any pain, substitutions, energy notes, or recovery comments?"
+      />
+    </AppSection>
+
+    <div>
+      <button
+        onClick={saveExerciseSleepEntry}
+        className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
+      >
+        Save Exercise / Sleep Entry
+      </button>
+    </div>
+  </div>
+)}
         {activeTab === "foodsMeals" && <PlaceholderPanel title="Foods / Meals" description="Next section to implement: combined food + meal management, editable foods, serving sizes, and meal-building." />}
         {activeTab === "workouts" && <PlaceholderPanel title="Workouts" description="Next section to implement: workout import, add/replace logic, manual plan builder, and workout plan editing." />}
         {activeTab === "goals" && <PlaceholderPanel title="Goals" description="Next section to implement: simplified goals page including the sleep goal." />}
