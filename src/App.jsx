@@ -5,6 +5,7 @@ import {
   Line,
   BarChart,
   Bar,
+  ComposedChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -1567,36 +1568,65 @@ function deleteWeightLog(id) {
       </AppSection>
 
       <AppSection title="Lifting Trend">
-        <div className="h-[280px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={liftingTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="volume" fill="#1d4ed8" name="Volume" />
-              <Bar dataKey="sets" fill="#60a5fa" name="Sets" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </AppSection>
+  <div className="h-[280px]">
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={liftingTrend}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis yAxisId="left" />
+        <YAxis yAxisId="right" orientation="right" />
+        <Tooltip />
+        <Legend />
+        <Bar
+          yAxisId="left"
+          dataKey="volume"
+          fill="#8b5cf6"
+          name="Volume"
+        />
+        <Line
+          yAxisId="right"
+          type="monotone"
+          dataKey="sets"
+          stroke="#4c1d95"
+          strokeWidth={3}
+          dot={{ r: 3 }}
+          name="Sets"
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  </div>
+</AppSection>
+
 
       <AppSection title="Cardio Trend">
-        <div className="h-[280px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={cardioTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="minutes" fill="#10b981" name="Minutes" />
-              <Bar dataKey="calories" fill="#34d399" name="Calories" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </AppSection>
+  <div className="h-[280px]">
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={cardioTrend}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis yAxisId="left" />
+        <YAxis yAxisId="right" orientation="right" />
+        <Tooltip />
+        <Legend />
+        <Bar
+          yAxisId="left"
+          dataKey="calories"
+          fill="#7c3aed"
+          name="Calories"
+        />
+        <Line
+          yAxisId="right"
+          type="monotone"
+          dataKey="minutes"
+          stroke="#4c1d95"
+          strokeWidth={3}
+          dot={{ r: 3 }}
+          name="Minutes"
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  </div>
+</AppSection>
 
       <AppSection title="Water Intake Trend">
         <div className="h-[280px]">
