@@ -382,43 +382,6 @@ export default function HealthFitnessTracker() {
     return () => clearTimeout(timer);
   }, [saveMessage]);
 
-  function saveFoodWeightEntry() {
-    let nextState = { ...state };
-    let didAnything = false;
-
-    if (quickFoodId && quickFoodServingId) {
-      const food = foodsById[quickFoodId];
-      const serving = food?.servings?.find((s) => s.id === quickFoodServingId);
-
-      if (food && serving) {
-        const qty = Number(quickFoodQty || 1);
-        const foodLog = {
-          id: uid(),
-          name: `${food.name} (${serving.label})`,
-          items: [
-            {
-              id: uid(),
-              foodId: food.id,
-              foodName: food.name,
-              servingId: serving.id,
-              servingLabel: serving.label,
-              quantity: qty,
-            },
-          ],
-          totals: {
-            calories: Number(serving.calories || 0) * qty,
-            protein: Number(serving.protein || 0) * qty,
-            carbs: Number(serving.carbs || 0) * qty,
-            fat: Number(serving.fat || 0) * qty,
-          },
-          timestamp: new Date().toISOString(),
-        };
-
-        nextState.foodLogs = [foodLog, ...(nextState.foodLogs || [])];
-        didAnything = true;
-      }
-    }
-
     function saveExerciseSleepEntry() {
     let nextState = { ...state };
     let didAnything = false;
@@ -601,7 +564,44 @@ export default function HealthFitnessTracker() {
     setDailyNote("");
     setSaveMessage("Food / weight entry saved.");
   }
-  
+
+  function saveFoodWeightEntry() {
+    let nextState = { ...state };
+    let didAnything = false;
+
+    if (quickFoodId && quickFoodServingId) {
+      const food = foodsById[quickFoodId];
+      const serving = food?.servings?.find((s) => s.id === quickFoodServingId);
+
+      if (food && serving) {
+        const qty = Number(quickFoodQty || 1);
+        const foodLog = {
+          id: uid(),
+          name: `${food.name} (${serving.label})`,
+          items: [
+            {
+              id: uid(),
+              foodId: food.id,
+              foodName: food.name,
+              servingId: serving.id,
+              servingLabel: serving.label,
+              quantity: qty,
+            },
+          ],
+          totals: {
+            calories: Number(serving.calories || 0) * qty,
+            protein: Number(serving.protein || 0) * qty,
+            carbs: Number(serving.carbs || 0) * qty,
+            fat: Number(serving.fat || 0) * qty,
+          },
+          timestamp: new Date().toISOString(),
+        };
+
+        nextState.foodLogs = [foodLog, ...(nextState.foodLogs || [])];
+        didAnything = true;
+      }
+    }
+
   function goToTab(tabKey) {
     setActiveTab(tabKey);
     setMobileMenuOpen(false);
