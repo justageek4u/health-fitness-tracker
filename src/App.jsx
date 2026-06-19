@@ -1959,65 +1959,69 @@ function deleteWeightLog(id) {
     </div>
   </div>
 )}
-        {activeTab === "foodWeightEntry" && (
-  <div className="space-y-4">
-    <div className="grid gap-4 xl:grid-cols-2">
-      <AppSection title="Food Entry">
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="text-sm font-medium text-slate-800">Food</div>
-          <select
-            className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
-            value={quickFoodId}
-            onChange={(e) => setQuickFoodId(e.target.value)}
-          >
-            <option value="">Choose a food</option>
-            {(state.foods || []).map((food) => (
-              <option key={food.id} value={food.id}>
-                {food.name}
-              </option>
-            ))}
-          </select>
+        {activeTab === "foodWeightEntry" && ({activeTab === "foodWeightEntry" && ))}
+            </select>
 
-          <select
-            className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
-            value={quickFoodServingId}
-            onChange={(e) => setQuickFoodServingId(e.target.value)}
-          >
-            <option value="">Choose serving size</option>
-            {(foodsById[quickFoodId]?.servings || []).map((serving) => (
-              <option key={serving.id} value={serving.id}>
-                {serving.label}
-              </option>
-            ))}
-          </select>
+            <select
+              className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
+              value={quickFoodServingId}
+              onChange={(e) => setQuickFoodServingId(e.target.value)}
+            >
+              <option value="">Choose serving size</option>
+              {(foodsById[quickFoodId]?.servings || []).map((serving) => (
+                <option key={serving.id} value={serving.id}>
+                  {serving.label}
+                </option>
+              ))}
+            </select>
 
-          <input
-            type="number"
-            min="0.25"
-            step="0.25"
-            value={quickFoodQty}
-            onChange={(e) => setQuickFoodQty(e.target.value)}
-            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
-            placeholder="Quantity"
-          />
+            <input
+              type="number"
+              min="0.25"
+              step="0.25"
+              value={quickFoodQty}
+              onChange={(e) => setQuickFoodQty(e.target.value)}
+              className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+              placeholder="Quantity"
+            />
+          </div>
         </div>
       </AppSection>
 
       <AppSection title="Meal Entry">
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="text-sm font-medium text-slate-800">Meal</div>
-          <select
-            className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
-            value={quickMealId}
-            onChange={(e) => setQuickMealId(e.target.value)}
-          >
-            <option value="">Choose a saved meal</option>
-            {(state.mealTemplates || []).map((meal) => (
-              <option key={meal.id} value={meal.id}>
-                {meal.name}
-              </option>
-            ))}
-          </select>
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-[1fr,auto]">
+            <input
+              className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+              placeholder="Search meals"
+              value={mealSearch}
+              onChange={(e) => setMealSearch(e.target.value)}
+            />
+            <label className="flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={showFavoriteMealsOnly}
+                onChange={(e) => setShowFavoriteMealsOnly(e.target.checked)}
+              />
+              Favorites only
+            </label>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-medium text-slate-800">Meal</div>
+            <select
+              className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
+              value={quickMealId}
+              onChange={(e) => setQuickMealId(e.target.value)}
+            >
+              <option value="">Choose a saved meal</option>
+              {filteredMeals.map((meal) => (
+                <option key={meal.id} value={meal.id}>
+                  {meal.favorite ? "★ " : ""}{meal.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </AppSection>
     </div>
@@ -2069,6 +2073,41 @@ function deleteWeightLog(id) {
     </div>
   </div>
 )}
+``
+  <div className="space-y-4">
+    <div className="grid gap-4 xl:grid-cols-2">
+      <AppSection title="Food Entry">
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-[1fr,auto]">
+            <input
+              className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+              placeholder="Search foods"
+              value={foodSearch}
+              onChange={(e) => setFoodSearch(e.target.value)}
+            />
+            <label className="flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={showFavoriteFoodsOnly}
+                onChange={(e) => setShowFavoriteFoodsOnly(e.target.checked)}
+              />
+              Favorites only
+            </label>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm font-medium text-slate-800">Food</div>
+            <select
+              className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
+              value={quickFoodId}
+              onChange={(e) => setQuickFoodId(e.target.value)}
+            >
+              <option value="">Choose a food</option>
+              {filteredFoods.map((food) => (
+                <option key={food.id} value={food.id}>
+                  {food.favorite ? "★ " : ""}{food.name}
+                </option>
+              
         {activeTab === "exerciseSleepEntry" && (
   <div className="space-y-4">
     <div className="grid gap-4 xl:grid-cols-[1.25fr,0.75fr]">
