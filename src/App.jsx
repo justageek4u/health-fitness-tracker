@@ -1413,11 +1413,11 @@ function deleteWeightLog(id) {
     URL.revokeObjectURL(url);
   }
 
-  function filterByExportRange(items) {function filterByExport (items || []).filter((item) =>
+  function filterByExportRange(items) {
+  return (items || []).filter((item) =>
     isWithinDateRange(item.timestamp, exportStartDate, exportEndDate)
   );
 }
-
 
 function getExportRows(category) {
   if (category === "foodLogs") {
