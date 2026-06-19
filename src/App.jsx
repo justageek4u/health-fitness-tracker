@@ -119,6 +119,24 @@ function groupByDay(records, dateField, reducer) {
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function parseCsv(text) {
+line) => line.trim())  const lines = text
+    .filter(Boolean);
+
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+
+  return lines.slice(1).map((line) => {
+    const cols = line.split(",").map((c) => c.trim());
+    const row = {};
+    headers.forEach((h, i) => {
+      row[h] = cols[i] ?? "";
+    });
+    return row;
+  });
+}
+
 function StatTile({ label, value, subtext, accent = "bg-sky-50 border-sky-100" }) {
   return (
     <div className={`rounded-2xl border p-4 shadow-sm ${accent}`}>
@@ -217,6 +235,20 @@ export default function HealthFitnessTracker() {
   const [mealDraftItems, setMealDraftItems] = useState([]);
   const [logStartDate, setLogStartDate] = useState(todayKey());
   const [logEndDate, setLogEndDate] = useState(todayKey());
+  const [manualPlanText, setManualPlanText] = useState(
+    "Day,Exercise,Type,TargetSets,TargetReps,TargetTime,TargetCalories,Notes\nMonday,Lat Pulldown,Lift,4,12,0,0,Wide grip\nMonday,Cable Row,Lift,4,12,0,0,Controlled tempo\nTuesday,Elliptical,Cardio,0,0,20,250,Moderate pace\nThursday,Bench Press,Lift,4,10,0,0,Flat bench\nFriday,Leg Press,Lift,4,15,0,0,Focus on control"
+  );
+
+  const [planBuilder, setPlanBuilder] = useState({
+    day: appDayFromDate(),
+    exercise: "",
+    type: "lift",
+    targetSets: "",
+    targetReps: "",
+    targetTime: "",
+    targetCalories: "",
+    notes: "",
+  });
   
   useEffect(() => {
     saveState(state);
@@ -1156,6 +1188,124 @@ function deleteWeightLog(id) {
     }));
 
     setSaveMessage("Meal deleted.");
+  }
+
+  function normalizePlanRows(rows) {
+    return rows
+      .map((r) => ({
+        id: uid(),
+        day: r.day || r.weekday || appDayFromDate(),
+        exercise: r.exercise || r.name || "",
+        type: (r.type || "lift").toLowerCase().includes("card") ? "cardio" : "lift",
+        targetSets: Number(r.targetsets || r.sets || 0),
+        targetReps: Number(r.targetreps || r.reps || 0),
+        targetTime: Number(r.targettime || r.minutes || 0),
+        targetCalories: Number(r.targetcalories || r.calories || 0),
+        notes: r.notes || "",
+        createdAt: new Date().toISOString(),
+      }))
+      .filter((r) => r.exercise);
+  }
+
+  function applyWorkoutPlanRows(rows, mode = "replace") {
+    const normalized = normalizePlanRows(rows);
+    if (!normalized.length) return;
+
+    setState((prev) => ({
+      ...prev,
+      workoutPlan: mode === "add" ? [...(prev.workoutPlan || []), ...normalized] : normalized,
+    }));
+
+    setSaveMessage(mode === "add" ? "Workout plan rows added." : "Workout plan replaced.");
+  }
+
+  async function handlePlanFileUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const mode =
+      state.workoutPlan.length > 0 &&
+      !window.confirm("Replace the current workout plan? Click Cancel to add to the existing plan.")
+        ? "add"
+        : "replace";
+
+    applyWorkoutPlanRows(parseCsv(text), mode);
+
+    if (event.target) {
+      event.target.value = "";
+    }
+  }
+
+  function importManualPlan() {
+    const mode =
+      state.workoutPlan.length > 0 &&
+      !window.confirm("Replace the current workout plan? Click Cancel to add to the existing plan.")
+        ? "add"
+        : "replace";
+
+    applyWorkoutPlanRows(parseCsv(manualPlanText), mode);
+  }
+
+  function addPlanRow() {
+    if (!planBuilder.exercise.trim()) return;
+
+    const row = {
+      id: uid(),
+      day: planBuilder.day,
+      exercise: planBuilder.exercise.trim(),
+      type: planBuilder.type,
+      targetSets: Number(planBuilder.targetSets || 0),
+      targetReps: Number(planBuilder.targetReps || 0),
+      targetTime: Number(planBuilder.targetTime || 0),
+      targetCalories: Number(planBuilder.targetCalories || 0),
+      notes: planBuilder.notes.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    setState((prev) => ({
+      ...prev,
+      workoutPlan: [...(prev.workoutPlan || []), row],
+    }));
+
+    setPlanBuilder({
+      day: appDayFromDate(),
+      exercise: "",
+      type: "lift",
+      targetSets: "",
+      targetReps: "",
+      targetTime: "",
+      targetCalories: "",
+      notes: "",
+    });
+
+    setSaveMessage("Plan row added.");
+  }
+
+  function updatePlanRow(rowId, field, value) {
+    setState((prev) => ({
+      ...prev,
+      workoutPlan: (prev.workoutPlan || []).map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              [field]:
+                field.startsWith("target")
+                  ? Number(value || 0)
+                  : value,
+            }
+          : row
+      ),
+    }));
+  }
+
+  function deletePlanRow(rowId) {
+    setState((prev) => ({
+      ...prev,
+      workoutPlan: (prev.workoutPlan || []).filter((row) => row.id !== rowId),
+    }));
+
+    setSaveMessage("Planned workout removed.");
   }
   
   function goToTab(tabKey) {
