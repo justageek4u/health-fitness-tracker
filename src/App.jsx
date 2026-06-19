@@ -120,7 +120,9 @@ function groupByDay(records, dateField, reducer) {
 }
 
 function parseCsv(text) {
-line) => line.trim())  const lines = text
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
     .filter(Boolean);
 
   if (lines.length < 2) return [];
@@ -233,6 +235,10 @@ export default function HealthFitnessTracker() {
   });
   const [mealDraftName, setMealDraftName] = useState("");
   const [mealDraftItems, setMealDraftItems] = useState([]);
+  const [foodSearch, setFoodSearch] = useState("");
+  const [mealSearch, setMealSearch] = useState("");
+  const [showFavoriteFoodsOnly, setShowFavoriteFoodsOnly] = useState(false);
+  const [showFavoriteMealsOnly, setShowFavoriteMealsOnly] = useState(false);
   const [logStartDate, setLogStartDate] = useState(todayKey());
   const [logEndDate, setLogEndDate] = useState(todayKey());
   const [manualPlanText, setManualPlanText] = useState(
@@ -398,10 +404,6 @@ export default function HealthFitnessTracker() {
     goal: Number(state.goals.water || 0),
   }));
 }, [state.waterLogs, state.goals]);
-
-const latestWeight = useMemo(() => {
-  return state.weightLogs?.[0] || null;
-}, [state.weightLogs]);
   
   const workoutPlanCompliance = useMemo(() => {
     const plannedToday = state.workoutPlan.some((item) => item.day === appDayFromDate());
@@ -461,12 +463,50 @@ const latestWeight = useMemo(() => {
     return Object.fromEntries((state.foods || []).map((food) => [food.id, food]));
   }, [state.foods]);
 
+  const filteredFoods = useMemo(() => {
+    let items = [...(state.foods || [])];
+
+    const query = foodSearch.trim().toLowerCase();
+    if (query) {
+      items = items.filter((food) => food.name.toLowerCase().includes(query));
+    }
+
+    if (showFavoriteFoodsOnly) {
+      items = items.filter((food) => !!food.favorite);
+    }
+
+    return items.sort((a, b) => {
+      const favDiff = Number(!!b.favorite) - Number(!!a.favorite);
+      if (favDiff !== 0) return favDiff;
+      return a.name.localeCompare(b.name);
+    });
+  }, [state.foods, foodSearch, showFavoriteFoodsOnly]);
+
+  const filteredMeals = useMemo(() => {
+    let items = [...(state.mealTemplates || [])];
+
+    const query = mealSearch.trim().toLowerCase();
+    if (query) {
+      items = items.filter((meal) => (meal.name || "").toLowerCase().includes(query));
+    }
+
+    if (showFavoriteMealsOnly) {
+      items = items.filter((meal) => !!meal.favorite);
+    }
+
+    return items.sort((a, b) => {
+      const favDiff = Number(!!b.favorite) - Number(!!a.favorite);
+      if (favDiff !== 0) return favDiff;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  }, [state.mealTemplates, mealSearch, showFavoriteMealsOnly]);
+  
   useEffect(() => {
     if (!quickFoodId) {
       setQuickFoodServingId("");
       return;
     }
-
+  
     const food = foodsById[quickFoodId];
     const firstServing = food?.servings?.[0]?.id || "";
 
@@ -884,6 +924,28 @@ function deleteWeightLog(id) {
   setSaveMessage("Weight entry deleted.");
 }
 
+  function toggleFoodFavorite(foodId) {
+    setState((prev) => ({
+      ...prev,
+      foods: (prev.foods || []).map((food) =>
+        food.id === foodId ? { ...food, favorite: !food.favorite } : food
+      ),
+    }));
+
+    setSaveMessage("Food favorite updated.");
+  }
+
+  function toggleMealFavorite(mealId) {
+    setState((prev) => ({
+      ...prev,
+      mealTemplates: (prev.mealTemplates || []).map((meal) =>
+        meal.id === mealId ? { ...meal, favorite: !meal.favorite } : meal
+      ),
+    }));
+
+    setSaveMessage("Meal favorite updated.");
+  }
+  
   function addFood() {
     if (!foodForm.name.trim() || !foodForm.servingLabel.trim()) return;
 
@@ -1141,12 +1203,13 @@ function deleteWeightLog(id) {
     if (!mealDraftName.trim() || mealDraftItems.length === 0) return;
 
     const meal = {
-      id: uid(),
-      name: mealDraftName.trim(),
-      itemSnapshots: mealDraftItems,
-      totals: mealDraftTotals(),
-      createdAt: new Date().toISOString(),
-    };
+  id: uid(),
+  name: mealDraftName.trim(),
+  favorite: false,
+  itemSnapshots: mealDraftItems,
+  totals: mealDraftTotals(),
+  createdAt: new Date().toISOString(),
+};
 
     setState((prev) => ({
       ...prev,
@@ -2177,255 +2240,7 @@ function deleteWeightLog(id) {
     </div>
   </div>
 )}
-        {activeTab === "foodsMeals" && (
-  <div className="grid gap-4 xl:grid-cols-[1fr,1.15fr]">
-    {/* Left column */}
-    <div className="space-y-4">
-      <AppSection title="Add Food">
-        <div className="space-y-3">
-          <input
-            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
-            placeholder="Food name"
-            value={foodForm.name}
-            onChange={(e) => setFoodForm((prev) => ({ ...prev, name: e.target.value }))}
-          />
-
-          <input
-            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
-            placeholder="Serving label (example: 1 cup)"
-            value={foodForm.servingLabel}
-            onChange={(e) => setFoodForm((prev) => ({ ...prev, servingLabel: e.target.value }))}
-          />
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <input
-              type="number"
-              className="rounded-2xl border border-slate-300 px-3 py-3"
-              placeholder="Protein (g)"
-              value={foodForm.protein}
-              onChange={(e) => setFoodForm((prev) => ({ ...prev, protein: e.target.value }))}
-            />
-            <input
-              type="number"
-              className="rounded-2xl border border-slate-300 px-3 py-3"
-              placeholder="Carbs (g)"
-              value={foodForm.carbs}
-              onChange={(e) => setFoodForm((prev) => ({ ...prev, carbs: e.target.value }))}
-            />
-            <input
-              type="number"
-              className="rounded-2xl border border-slate-300 px-3 py-3"
-              placeholder="Fat (g)"
-              value={foodForm.fat}
-              onChange={(e) => setFoodForm((prev) => ({ ...prev, fat: e.target.value }))}
-            />
-            <input
-              type="number"
-              className="rounded-2xl border border-slate-300 px-3 py-3"
-              placeholder="Calories"
-              value={foodForm.calories}
-              onChange={(e) => setFoodForm((prev) => ({ ...prev, calories: e.target.value }))}
-            />
-          </div>
-
-          <button
-            onClick={addFood}
-            className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
-          >
-            Save Food
-          </button>
-        </div>
-      </AppSection>
-
-      <AppSection title="Build Meal">
-        <div className="space-y-4">
-          <input
-            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
-            placeholder="Meal name"
-            value={mealDraftName}
-            onChange={(e) => setMealDraftName(e.target.value)}
-          />
-
-          {mealDraftItems.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-              Use “Add to Meal” from a saved food serving on the right.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {mealDraftItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1fr,110px,auto] md:items-center"
-                >
-                  <div>
-                    <div className="font-medium text-slate-900">{item.foodName}</div>
-                    <div className="text-sm text-slate-600">
-                      {item.servingLabel} • {item.macros.calories} cal • P {item.macros.protein} • C {item.macros.carbs} • F {item.macros.fat}
-                    </div>
-                  </div>
-
-                  <input
-                    type="number"
-                    min="0.25"
-                    step="0.25"
-                    className="rounded-2xl border border-slate-300 px-3 py-2"
-                    value={item.quantity}
-                    onChange={(e) => updateMealDraftQty(item.id, e.target.value)}
-                  />
-
-                  <button
-                    onClick={() => removeMealDraftItem(item.id)}
-                    className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            {(() => {
-              const totals = mealDraftTotals();
-              return (
-                <div className="grid gap-2 sm:grid-cols-4">
-                  <div>Calories: <span className="font-medium">{Math.round(totals.calories)}</span></div>
-                  <div>Protein: <span className="font-medium">{Math.round(totals.protein)} g</span></div>
-                  <div>Carbs: <span className="font-medium">{Math.round(totals.carbs)} g</span></div>
-                  <div>Fat: <span className="font-medium">{Math.round(totals.fat)} g</span></div>
-                </div>
-              );
-            })()}
-          </div>
-
-          <button
-            onClick={saveMealTemplate}
-            className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
-          >
-            Save Meal
-          </button>
-        </div>
-      </AppSection>
-    </div>
-
-    {/* Right column */}
-    <div className="space-y-4">
-      <AppSection title="Saved Foods">
-        <div className="grid max-h-[620px] gap-3 overflow-auto pr-1">
-          {(state.foods || []).length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-              No saved foods yet.
-            </div>
-          ) : (
-            (state.foods || []).map((food) => (
-              <div key={food.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-medium text-slate-900">{food.name}</div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      Added {new Date(food.createdAt).toLocaleString()}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={() => renameFood(food.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100">
-                      Edit Food
-                    </button>
-                    <button onClick={() => addServingToFood(food.id)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-100">
-                      Add Serving
-                    </button>
-                    <button onClick={() => deleteFood(food.id)} className="rounded-xl border border-rose-200 bg-white px-3 py-1 text-sm text-rose-600 hover:bg-rose-50">
-                      Delete Food
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-3 space-y-2">
-                  {(food.servings || []).map((serving) => (
-                    <div key={serving.id} className="rounded-2xl border border-white bg-white p-3 text-sm text-slate-700">
-                      <div className="font-medium text-slate-900">{serving.label}</div>
-                      <div className="mt-1">
-                        {serving.calories} cal • P {serving.protein} • C {serving.carbs} • F {serving.fat}
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          onClick={() => logServingNow(food.id, serving.id)}
-                          className="rounded-xl bg-gradient-to-r from-sky-600 to-violet-600 px-3 py-2 text-sm font-medium text-white hover:opacity-95"
-                        >
-                          Log
-                        </button>
-
-                        <button
-                          onClick={() => addServingToMealDraft(food.id, serving.id)}
-                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                        >
-                          Add to Meal
-                        </button>
-
-                        <button
-                          onClick={() => editServing(food.id, serving.id)}
-                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                        >
-                          Edit Serving
-                        </button>
-
-                        <button
-                          onClick={() => deleteServing(food.id, serving.id)}
-                          className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
-                        >
-                          Delete Serving
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </AppSection>
-
-      <AppSection title="Saved Meals">
-        <div className="grid max-h-[260px] gap-3 overflow-auto pr-1">
-          {(state.mealTemplates || []).length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-              No saved meals yet.
-            </div>
-          ) : (
-            (state.mealTemplates || []).map((meal) => (
-              <div key={meal.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-medium text-slate-900">{meal.name}</div>
-                    <div className="mt-1 text-sm text-slate-600">
-                      {Math.round(meal.totals?.calories || 0)} cal • P {Math.round(meal.totals?.protein || 0)} • C {Math.round(meal.totals?.carbs || 0)} • F {Math.round(meal.totals?.fat || 0)}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <button
-                      onClick={() => logMealNow(meal.id)}
-                      className="rounded-xl bg-gradient-to-r from-sky-600 to-violet-600 px-3 py-2 text-sm font-medium text-white hover:opacity-95"
-                    >
-                      Log Meal
-                    </button>
-                    <button
-                      onClick={() => deleteMealTemplate(meal.id)}
-                      className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-rose-600 hover:bg-rose-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </AppSection>
-    </div>
-  </div>
-)}
+        
         {activeTab === "workouts" && <PlaceholderPanel title="Workouts" description="Next section to implement: workout import, add/replace logic, manual plan builder, and workout plan editing." />}
         {activeTab === "goals" && <PlaceholderPanel title="Goals" description="Next section to implement: simplified goals page including the sleep goal." />}
         {activeTab === "export" && <PlaceholderPanel title="Export / Backup" description="Next section to implement: CSV export, JSON backup, and JSON restore." />}
