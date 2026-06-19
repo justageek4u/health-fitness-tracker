@@ -182,7 +182,15 @@ export default function HealthFitnessTracker() {
   const [state, setState] = useState(loadState);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  const [quickFoodId, setQuickFoodId] = useState("");
+  const [quickFoodServingId, setQuickFoodServingId] = useState("");
+  const [quickFoodQty, setQuickFoodQty] = useState(1);
+  const [quickMealId, setQuickMealId] = useState("");
+  const [waterAmount, setWaterAmount] = useState("");
+  const [weightValue, setWeightValue] = useState("");
+  const [dailyNote, setDailyNote] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
+  
   useEffect(() => {
     saveState(state);
   }, [state]);
@@ -304,6 +312,138 @@ export default function HealthFitnessTracker() {
     };
   }, [state.workoutPlan, state.workoutSessions, todaysWorkoutSession]);
 
+  const foodsById = useMemo(() => {
+    return Object.fromEntries((state.foods || []).map((food) => [food.id, food]));
+  }, [state.foods]);
+
+  useEffect(() => {
+    if (!quickFoodId) {
+      setQuickFoodServingId("");
+      return;
+    }
+
+    const food = foodsById[quickFoodId];
+    const firstServing = food?.servings?.[0]?.id || "";
+
+    if (!food?.servings?.some((s) => s.id === quickFoodServingId)) {
+      setQuickFoodServingId(firstServing);
+    }
+  }, [quickFoodId, quickFoodServingId, foodsById]);
+
+  useEffect(() => {
+    if (!saveMessage) return;
+    const timer = setTimeout(() => setSaveMessage(""), 2200);
+    return () => clearTimeout(timer);
+  }, [saveMessage]);
+
+  function saveFoodWeightEntry() {
+    let nextState = { ...state };
+    let didAnything = false;
+
+    if (quickFoodId && quickFoodServingId) {
+      const food = foodsById[quickFoodId];
+      const serving = food?.servings?.find((s) => s.id === quickFoodServingId);
+
+      if (food && serving) {
+        const qty = Number(quickFoodQty || 1);
+        const foodLog = {
+          id: uid(),
+          name: `${food.name} (${serving.label})`,
+          items: [
+            {
+              id: uid(),
+              foodId: food.id,
+              foodName: food.name,
+              servingId: serving.id,
+              servingLabel: serving.label,
+              quantity: qty,
+            },
+          ],
+          totals: {
+            calories: Number(serving.calories || 0) * qty,
+            protein: Number(serving.protein || 0) * qty,
+            carbs: Number(serving.carbs || 0) * qty,
+            fat: Number(serving.fat || 0) * qty,
+          },
+          timestamp: new Date().toISOString(),
+        };
+
+        nextState.foodLogs = [foodLog, ...(nextState.foodLogs || [])];
+        didAnything = true;
+      }
+    }
+
+    if (quickMealId) {
+      const meal = (nextState.mealTemplates || []).find((m) => m.id === quickMealId);
+      if (meal) {
+        const mealLog = {
+          id: uid(),
+          name: meal.name,
+          items: (meal.itemSnapshots || []).map((item) => ({
+            ...item,
+            id: uid(),
+          })),
+          totals: { ...(meal.totals || {}) },
+          timestamp: new Date().toISOString(),
+        };
+
+        nextState.foodLogs = [mealLog, ...(nextState.foodLogs || [])];
+        didAnything = true;
+      }
+    }
+
+    const water = Number(waterAmount || 0);
+    if (water) {
+      nextState.waterLogs = [
+        {
+          id: uid(),
+          ounces: water,
+          timestamp: new Date().toISOString(),
+        },
+        ...(nextState.waterLogs || []),
+      ];
+      didAnything = true;
+    }
+
+    const note = dailyNote.trim();
+    if (note) {
+      nextState.noteLogs = [
+        {
+          id: uid(),
+          note,
+          timestamp: new Date().toISOString(),
+        },
+        ...(nextState.noteLogs || []),
+      ];
+      didAnything = true;
+    }
+
+    const weight = Number(weightValue || 0);
+    if (weight) {
+      nextState.weightLogs = [
+        {
+          id: uid(),
+          weight,
+          timestamp: new Date().toISOString(),
+        },
+        ...(nextState.weightLogs || []),
+      ];
+      didAnything = true;
+    }
+
+    if (!didAnything) return;
+
+    setState(nextState);
+    setQuickFoodId("");
+    setQuickFoodServingId("");
+    setQuickFoodQty(1);
+    setQuickMealId("");
+    setWaterAmount("");
+    setWeightValue("");
+    setDailyNote("");
+    setSaveMessage("Food / weight entry saved.");
+  }
+  
   function goToTab(tabKey) {
     setActiveTab(tabKey);
     setMobileMenuOpen(false);
@@ -311,6 +451,18 @@ export default function HealthFitnessTracker() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-violet-50 to-white text-slate-900">
+      <AnimatePresence>
+        {saveMessage ? (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-xl"
+          >
+            {saveMessage}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       <div className="mx-auto max-w-7xl p-4 md:p-6">
         <div className="mb-5 rounded-3xl border border-sky-100 bg-white/80 p-5 shadow-sm backdrop-blur">
           <div className="flex items-center justify-between gap-4">
@@ -536,7 +688,111 @@ export default function HealthFitnessTracker() {
     </div>
   </div>
 )}
-        {activeTab === "foodWeightEntry" && <PlaceholderPanel title="Food & Weight Entry" description="Next section to implement: food logging, meal logging, water intake, notes, and weight entry." />}
+        {activeTab === "foodWeightEntry" && (
+  <div className="grid gap-4 xl:grid-cols-2">
+    <AppSection title="Food, Water, and Notes Entry">
+      <div className="space-y-5">
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="text-sm font-medium text-slate-800">Food</div>
+          <select
+            className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
+            value={quickFoodId}
+            onChange={(e) => setQuickFoodId(e.target.value)}
+          >
+            <option value="">Choose a food</option>
+            {(state.foods || []).map((food) => (
+              <option key={food.id} value={food.id}>
+                {food.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
+            value={quickFoodServingId}
+            onChange={(e) => setQuickFoodServingId(e.target.value)}
+          >
+            <option value="">Choose serving size</option>
+            {(foodsById[quickFoodId]?.servings || []).map((serving) => (
+              <option key={serving.id} value={serving.id}>
+                {serving.label}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            min="0.25"
+            step="0.25"
+            value={quickFoodQty}
+            onChange={(e) => setQuickFoodQty(e.target.value)}
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Quantity"
+          />
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="text-sm font-medium text-slate-800">Meal</div>
+          <select
+            className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-3"
+            value={quickMealId}
+            onChange={(e) => setQuickMealId(e.target.value)}
+          >
+            <option value="">Choose a saved meal</option>
+            {(state.mealTemplates || []).map((meal) => (
+              <option key={meal.id} value={meal.id}>
+                {meal.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="text-sm font-medium text-slate-800">Water Intake</div>
+          <input
+            type="number"
+            value={waterAmount}
+            onChange={(e) => setWaterAmount(e.target.value)}
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Water in oz"
+          />
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="text-sm font-medium text-slate-800">Notes Through the Day</div>
+          <textarea
+            value={dailyNote}
+            onChange={(e) => setDailyNote(e.target.value)}
+            className="min-h-[110px] w-full rounded-2xl border border-slate-300 p-3"
+            placeholder="Energy level, soreness, sickness, stress, appetite, etc."
+          />
+        </div>
+      </div>
+    </AppSection>
+
+    <AppSection title="Weight Entry">
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="text-sm font-medium text-slate-800">Weight</div>
+          <input
+            type="number"
+            value={weightValue}
+            onChange={(e) => setWeightValue(e.target.value)}
+            placeholder="Enter bodyweight in lb"
+            className="mt-3 w-full rounded-2xl border border-slate-300 px-3 py-3"
+          />
+        </div>
+
+        <button
+          onClick={saveFoodWeightEntry}
+          className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
+        >
+          Save Food / Weight Entry
+        </button>
+      </div>
+    </AppSection>
+  </div>
+)}
         {activeTab === "exerciseSleepEntry" && <PlaceholderPanel title="Exercise & Sleep Entry" description="Next section to implement: whole-workout entry screen, workout notes, and previous-night sleep entry/edit." />}
         {activeTab === "foodsMeals" && <PlaceholderPanel title="Foods / Meals" description="Next section to implement: combined food + meal management, editable foods, serving sizes, and meal-building." />}
         {activeTab === "workouts" && <PlaceholderPanel title="Workouts" description="Next section to implement: workout import, add/replace logic, manual plan builder, and workout plan editing." />}
