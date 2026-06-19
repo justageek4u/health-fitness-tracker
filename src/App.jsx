@@ -140,6 +140,23 @@ function parseCsv(text) {
   });
 }
 
+function toCsv(rows) {
+  if (!rows || rows.length === 0) return "";
+  const headers = Object.keys(rows[0]);
+  const escapeCell = (value) => {
+    const text = String(value ?? "");
+    if (text.includes(",") || text.includes('"') || text.includes("\n")) {
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+  };
+
+  return [
+    headers.join(","),
+    ...rows.map((row) => headers.map((h) => escapeCell(row[h])).join(",")),
+  ].join("\n");
+}
+
 function StatTile({ label, value, subtext, accent = "bg-sky-50 border-sky-100" }) {
   return (
     <div className={`rounded-2xl border p-4 shadow-sm ${accent}`}>
@@ -256,6 +273,9 @@ export default function HealthFitnessTracker() {
     targetCalories: "",
     notes: "",
   });
+
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
   
   useEffect(() => {
     saveState(state);
@@ -1370,6 +1390,206 @@ function deleteWeightLog(id) {
     }));
 
     setSaveMessage("Planned workout removed.");
+  }
+
+  function updateGoal(field, value) {
+    setState((prev) => ({
+      ...prev,
+      goals: {
+        ...prev.goals,
+        [field]: Number(value || 0),
+      },
+    }));
+  }
+
+  function downloadTextFile(filename, content, mimeType = "text/plain;charset=utf-8") {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function filterByExportRange(items) {
+    return (items || []).filter((item) =>
+      isWithinDateRange(item.timestamp, exportStartDate, exportEndDate)
+    );
+  }
+
+  function exportCategory(category) {
+    let rows = [];
+    const nowStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+
+    if (category === "foodLogs") {
+      rows = filterByExportRange(state.foodLogs).map((log) => ({
+        id: log.id,
+        timestamp: log.timestamp,
+        name: log.name,
+        calories: Number(log.totals?.calories || 0),
+        protein: Number(log.totals?.protein || 0),
+        carbs: Number(log.totals?.carbs || 0),
+        fat: Number(log.totals?.fat || 0),
+      }));
+    }
+
+    if (category === "waterLogs") {
+      rows = filterByExportRange(state.waterLogs).map((log) => ({
+        id: log.id,
+        timestamp: log.timestamp,
+        ounces: Number(log.ounces || 0),
+      }));
+    }
+
+    if (category === "weightLogs") {
+      rows = filterByExportRange(state.weightLogs).map((log) => ({
+        id: log.id,
+        timestamp: log.timestamp,
+        weight: Number(log.weight || 0),
+      }));
+    }
+
+    if (category === "sleepLogs") {
+      rows = filterByExportRange(state.sleepLogs).map((log) => ({
+        id: log.id,
+        timestamp: log.timestamp,
+        hours: Number(log.hours || 0),
+      }));
+    }
+
+    if (category === "noteLogs") {
+      rows = filterByExportRange(state.noteLogs).map((log) => ({
+        id: log.id,
+        timestamp: log.timestamp,
+        note: log.note || "",
+      }));
+    }
+
+    if (category === "workoutSessions") {
+      rows = filterByExportRange(state.workoutSessions).map((session) => ({
+        id: session.id,
+        timestamp: session.timestamp,
+        day: session.day,
+        notes: session.notes || "",
+        summary: (session.summary || []).join(" | "),
+      }));
+    }
+
+    if (category === "workoutLogs") {
+      rows = filterByExportRange(state.workoutLogs).map((log) => ({
+        id: log.id,
+        timestamp: log.timestamp,
+        day: log.day || "",
+        exercise: log.exercise || "",
+        type: log.type || "",
+        setNumber: Number(log.setNumber || 0),
+        reps: Number(log.reps || 0),
+        weight: Number(log.weight || 0),
+        minutes: Number(log.minutes || 0),
+        cardioCalories: Number(log.cardioCalories || 0),
+      }));
+    }
+
+    if (category === "foods") {
+      rows = (state.foods || []).flatMap((food) =>
+        (food.servings || []).map((serving) => ({
+          foodId: food.id,
+          foodName: food.name,
+          favorite: !!food.favorite,
+          servingId: serving.id,
+          servingLabel: serving.label,
+          calories: Number(serving.calories || 0),
+          protein: Number(serving.protein || 0),
+          carbs: Number(serving.carbs || 0),
+          fat: Number(serving.fat || 0),
+          createdAt: food.createdAt || "",
+        }))
+      );
+    }
+
+    if (category === "meals") {
+      rows = (state.mealTemplates || []).map((meal) => ({
+        id: meal.id,
+        name: meal.name,
+        favorite: !!meal.favorite,
+        calories: Number(meal.totals?.calories || 0),
+        protein: Number(meal.totals?.protein || 0),
+        carbs: Number(meal.totals?.carbs || 0),
+        fat: Number(meal.totals?.fat || 0),
+        itemCount: (meal.itemSnapshots || []).length,
+        createdAt: meal.createdAt || "",
+      }));
+    }
+
+    if (category === "workoutPlan") {
+      rows = (state.workoutPlan || []).map((row) => ({
+        id: row.id,
+        day: row.day,
+        exercise: row.exercise,
+        type: row.type,
+        targetSets: Number(row.targetSets || 0),
+        targetReps: Number(row.targetReps || 0),
+        targetTime: Number(row.targetTime || 0),
+        targetCalories: Number(row.targetCalories || 0),
+        notes: row.notes || "",
+        createdAt: row.createdAt || "",
+      }));
+    }
+
+    const csv = toCsv(rows);
+    downloadTextFile(`${category}_${nowStamp}.csv`, csv, "text/csv;charset=utf-8");
+    setSaveMessage(`${category} exported.`);
+  }
+
+  function downloadJsonBackup() {
+    const nowStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    downloadTextFile(
+      `health_fitness_tracker_backup_${nowStamp}.json`,
+      JSON.stringify(state, null, 2),
+      "application/json;charset=utf-8"
+    );
+    setSaveMessage("JSON backup downloaded.");
+  }
+
+  function mergeById(existingItems = [], incomingItems = []) {
+    const seen = new Set(existingItems.map((item) => item.id));
+    const additions = incomingItems.filter((item) => item?.id && !seen.has(item.id));
+    return [...existingItems, ...additions];
+  }
+
+  async function importJsonBackup(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const incoming = JSON.parse(text);
+
+      setState((prev) => ({
+        ...prev,
+        account: { ...prev.account, ...(incoming.account || {}) },
+        goals: { ...prev.goals, ...(incoming.goals || {}) },
+        foods: mergeById(prev.foods || [], incoming.foods || []),
+        mealTemplates: mergeById(prev.mealTemplates || [], incoming.mealTemplates || []),
+        foodLogs: mergeById(prev.foodLogs || [], incoming.foodLogs || []),
+        waterLogs: mergeById(prev.waterLogs || [], incoming.waterLogs || []),
+        weightLogs: mergeById(prev.weightLogs || [], incoming.weightLogs || []),
+        sleepLogs: mergeById(prev.sleepLogs || [], incoming.sleepLogs || []),
+        noteLogs: mergeById(prev.noteLogs || [], incoming.noteLogs || []),
+        workoutPlan: mergeById(prev.workoutPlan || [], incoming.workoutPlan || []),
+        workoutLogs: mergeById(prev.workoutLogs || [], incoming.workoutLogs || []),
+        workoutSessions: mergeById(prev.workoutSessions || [], incoming.workoutSessions || []),
+      }));
+
+      setSaveMessage("JSON backup imported. Duplicates were ignored.");
+    } catch {
+      setSaveMessage("Backup import failed.");
+    }
+
+    if (event.target) {
+      event.target.value = "";
+    }
   }
   
   function goToTab(tabKey) {
@@ -2828,9 +3048,227 @@ function deleteWeightLog(id) {
     </AppSection>
   </div>
 )}
-        {activeTab === "goals" && <PlaceholderPanel title="Goals" description="Next section to implement: simplified goals page including the sleep goal." />}
-        {activeTab === "export" && <PlaceholderPanel title="Export / Backup" description="Next section to implement: CSV export, JSON backup, and JSON restore." />}
-        {activeTab === "howTo" && <PlaceholderPanel title="How-To" description="Next section to implement: feature-by-feature instructions for the app." />}
+        {activeTab === "goals" && ({activeTab === "go3"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-700">Fat (g)</label>
+        <input
+          type="number"
+          value={state.goals.fat}
+          onChange={(e) => updateGoal("fat", e.target.value)}
+          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-700">Water (oz)</label>
+        <input
+          type="number"
+          value={state.goals.water}
+          onChange={(e) => updateGoal("water", e.target.value)}
+          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-700">Sleep (hours)</label>
+        <input
+          type="number"
+          step="0.25"
+          value={state.goals.sleep}
+          onChange={(e) => updateGoal("sleep", e.target.value)}
+          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+        />
+      </div>
+    </div>
+  </AppSection>
+)}
+  <AppSection title="Goals">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-700">Calories</label>
+        <input
+          type="number"
+          value={state.goals.calories}
+          onChange={(e) => updateGoal("calories", e.target.value)}
+          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-700">Protein (g)</label>
+        <input
+          type="number"
+          value={state.goals.protein}
+          onChange={(e) => updateGoal("protein", e.target.value)}
+          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-700">Carbs (g)</label>
+        <input
+          type="number"
+          value={state.goals.carbs}
+          onChange={(e) => updateGoal("carbs", e.target.value)}
+
+        {activeTab === "export" && ({activeTab === "mb-2 block text-sm font-medium text-slate-700">Start date</label>
+          <input
+            type="date"
+            value={exportStartDate}
+            onChange={(e) => setExportStartDate(e.target.value)}
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">End date</label>
+          <input
+            type="date"
+            value={exportEndDate}
+            onChange={(e) => setExportEndDate(e.target.value)}
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+          />
+        </div>
+      </div>
+    </AppSection>
+
+    <AppSection title="Export CSV">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <button onClick={() => exportCategory("foodLogs")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Food Logs
+        </button>
+        <button onClick={() => exportCategory("waterLogs")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Water Logs
+        </button>
+        <button onClick={() => exportCategory("weightLogs")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Weight Logs
+        </button>
+        <button onClick={() => exportCategory("sleepLogs")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Sleep Logs
+        </button>
+        <button onClick={() => exportCategory("noteLogs")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Notes
+        </button>
+        <button onClick={() => exportCategory("workoutSessions")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Workout Sessions
+        </button>
+        <button onClick={() => exportCategory("workoutLogs")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Workout Logs
+        </button>
+        <button onClick={() => exportCategory("foods")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Foods
+        </button>
+        <button onClick={() => exportCategory("meals")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Meals
+        </button>
+        <button onClick={() => exportCategory("workoutPlan")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
+          Export Workout Plan
+        </button>
+      </div>
+    </AppSection>
+
+    <AppSection title="JSON Backup / Restore">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="text-sm font-medium text-slate-800">Download full JSON backup</div>
+          <div className="mt-2 text-sm text-slate-500">
+            This includes goals, foods, meals, logs, and workout plan.
+          </div>
+          <button
+            onClick={downloadJsonBackup}
+            className="mt-4 w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
+          >
+            Download JSON Backup
+          </button>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="text-sm font-medium text-slate-800">Import JSON backup</div>
+          <div className="mt-2 text-sm text-slate-500">
+            Duplicate entries will be ignored based on IDs.
+          </div>
+          <input
+            type="file"
+            accept=".json,application/json"
+            onChange={importJsonBackup}
+            className="mt-4 block w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm"
+          />
+        </div>
+      </div>
+    </AppSection>
+  </div>
+)}
+  <div className="space-y-4">
+    <AppSection title="Export Range">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+
+        {activeTab === "howTo" && (
+  <div className="space-y-4">
+    <AppSection title="How To Use This App">
+      <div className="space-y-4 text-sm text-slate-700">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Dashboard</div>
+          <div className="mt-2">
+            Use the Dashboard to monitor calories, protein, carbs, fat, workout progress, water, sleep, weight, lifting, and cardio trends over time.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Log</div>
+          <div className="mt-2">
+            Use the Log tab to review saved entries. Filter by date range and edit or delete entries if something was logged incorrectly.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Food & Weight Entry</div>
+          <div className="mt-2">
+            Search foods or meals, log water, add notes, and record weight. Click the save button once at the bottom to save the entry.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Exercise & Sleep Entry</div>
+          <div className="mt-2">
+            Choose the workout day, enter completed exercise values, add workout notes, and record the previous night’s sleep. Save everything with one button.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Foods / Meals</div>
+          <div className="mt-2">
+            Add foods, define serving sizes, search and favorite foods, build meal templates, and save favorite meals for faster future logging.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Workouts</div>
+          <div className="mt-2">
+            Import a workout plan from CSV, paste CSV text, or build rows manually. Edit planned workouts directly in the Workouts tab.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Goals</div>
+          <div className="mt-2">
+            Update your macro, water, and sleep targets here so the dashboard trend charts compare your actual values against your goals.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Export / Backup</div>
+          <div className="mt-2">
+            Export CSV files by category over a selected date range, or download/import a full JSON backup of the app. JSON imports ignore duplicate IDs.
+          </div>
+        </div>
+      </div>
+    </AppSection>
+  </div>
+)}
       </div>
     </div>
   );
