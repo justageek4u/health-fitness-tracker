@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import * as XLSX from "xlsx";
 
 const STORAGE_KEY = "health_fitness_tracker_v3";
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1418,124 +1419,163 @@ function deleteWeightLog(id) {
     );
   }
 
+  function getExportRows(category) {
+  if (category === "foodLogs") {
+    return filterByExportRange(state.foodLogs).map((log) => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      name: log.name,
+      calories: Number(log.totals?.calories || 0),
+      protein: Number(log.totals?.protein || 0),
+      carbs: Number(log.totals?.carbs || 0),
+      fat: Number(log.totals?.fat || 0),
+    }));
+  }
+
+  if (category === "waterLogs") {
+    return filterByExportRange(state.waterLogs).map((log) => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      ounces: Number(log.ounces || 0),
+    }));
+  }
+
+  if (category === "weightLogs") {
+    return filterByExportRange(state.weightLogs).map((log) => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      weight: Number(log.weight || 0),
+    }));
+  }
+
+  if (category === "sleepLogs") {
+    return filterByExportRange(state.sleepLogs).map((log) => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      hours: Number(log.hours || 0),
+    }));
+  }
+
+  if (category === "noteLogs") {
+    return filterByExportRange(state.noteLogs).map((log) => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      note: log.note || "",
+    }));
+  }
+
+  if (category === "workoutSessions") {
+    return filterByExportRange(state.workoutSessions).map((session) => ({
+      id: session.id,
+      timestamp: session.timestamp,
+      day: session.day,
+      notes: session.notes || "",
+      summary: (session.summary || []).join(" | "),
+    }));
+  }
+
+  if (category === "workoutLogs") {
+    return filterByExportRange(state.workoutLogs).map((log) => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      day: log.day || "",
+      exercise: log.exercise || "",
+      type: log.type || "",
+      setNumber: Number(log.setNumber || 0),
+      reps: Number(log.reps || 0),
+      weight: Number(log.weight || 0),
+      minutes: Number(log.minutes || 0),
+      cardioCalories: Number(log.cardioCalories || 0),
+    }));
+  }
+
+  if (category === "foods") {
+    return (state.foods || []).flatMap((food) =>
+      (food.servings || []).map((serving) => ({
+        foodId: food.id,
+        foodName: food.name,
+        favorite: !!food.favorite,
+        servingId: serving.id,
+        servingLabel: serving.label,
+        calories: Number(serving.calories || 0),
+        protein: Number(serving.protein || 0),
+        carbs: Number(serving.carbs || 0),
+        fat: Number(serving.fat || 0),
+        createdAt: food.createdAt || "",
+      }))
+    );
+  }
+
+  if (category === "meals") {
+    return (state.mealTemplates || []).map((meal) => ({
+      id: meal.id,
+      name: meal.name,
+      favorite: !!meal.favorite,
+      calories: Number(meal.totals?.calories || 0),
+      protein: Number(meal.totals?.protein || 0),
+      carbs: Number(meal.totals?.carbs || 0),
+      fat: Number(meal.totals?.fat || 0),
+      itemCount: (meal.itemSnapshots || []).length,
+      createdAt: meal.createdAt || "",
+    }));
+  }
+
+  if (category === "workoutPlan") {
+    return (state.workoutPlan || []).map((row) => ({
+      id: row.id,
+      day: row.day,
+      exercise: row.exercise,
+      type: row.type,
+      targetSets: Number(row.targetSets || 0),
+      targetReps: Number(row.targetReps || 0),
+      targetTime: Number(row.targetTime || 0),
+      targetCalories: Number(row.targetCalories || 0),
+      notes: row.notes || "",
+      createdAt: row.createdAt || "",
+    }));
+  }
+
+  return [];
+}
+    
   function exportCategory(category) {
-    let rows = [];
-    const nowStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  const rows = getExportRows(category);
+  const nowStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  const csv = toCsv(rows);
+  downloadTextFile(`${category}_${nowStamp}.csv`, csv, "text/csv;charset=utf-8");
+  setSaveMessage(`${category} exported.`);
+}
+function exportAllToWorkbook() {function exportAll  const nowStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
 
-    if (category === "foodLogs") {
-      rows = filterByExportRange(state.foodLogs).map((log) => ({
-        id: log.id,
-        timestamp: log.timestamp,
-        name: log.name,
-        calories: Number(log.totals?.calories || 0),
-        protein: Number(log.totals?.protein || 0),
-        carbs: Number(log.totals?.carbs || 0),
-        fat: Number(log.totals?.fat || 0),
-      }));
-    }
+  const sheetConfigs = [
+    { key: "foodLogs", name: "Food Logs" },
+    { key: "waterLogs", name: "Water Logs" },
+    { key: "weightLogs", name: "Weight Logs" },
+    { key: "sleepLogs", name: "Sleep Logs" },
+    { key: "noteLogs", name: "Notes" },
+    { key: "workoutSessions", name: "Workout Sessions" },
+    { key: "workoutLogs", name: "Workout Logs" },
+    { key: "foods", name: "Foods" },
+    { key: "meals", name: "Meals" },
+    { key: "workoutPlan", name: "Workout Plan" },
+  ];
 
-    if (category === "waterLogs") {
-      rows = filterByExportRange(state.waterLogs).map((log) => ({
-        id: log.id,
-        timestamp: log.timestamp,
-        ounces: Number(log.ounces || 0),
-      }));
-    }
+  const workbook = XLSX.utils.book_new();
 
-    if (category === "weightLogs") {
-      rows = filterByExportRange(state.weightLogs).map((log) => ({
-        id: log.id,
-        timestamp: log.timestamp,
-        weight: Number(log.weight || 0),
-      }));
-    }
+  sheetConfigs.forEach(({ key, name }) => {
+    const rows = getExportRows(key);
+    const safeRows =
+      rows.length > 0
+        ? rows
+        : [{ message: "No records found for this sheet in the selected range." }];
 
-    if (category === "sleepLogs") {
-      rows = filterByExportRange(state.sleepLogs).map((log) => ({
-        id: log.id,
-        timestamp: log.timestamp,
-        hours: Number(log.hours || 0),
-      }));
-    }
+    const worksheet = XLSX.utils.json_to_sheet(safeRows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, name);
+  });
 
-    if (category === "noteLogs") {
-      rows = filterByExportRange(state.noteLogs).map((log) => ({
-        id: log.id,
-        timestamp: log.timestamp,
-        note: log.note || "",
-      }));
-    }
-
-    if (category === "workoutSessions") {
-      rows = filterByExportRange(state.workoutSessions).map((session) => ({
-        id: session.id,
-        timestamp: session.timestamp,
-        day: session.day,
-        notes: session.notes || "",
-        summary: (session.summary || []).join(" | "),
-      }));
-    }
-
-    if (category === "workoutLogs") {
-      rows = filterByExportRange(state.workoutLogs).map((log) => ({
-        id: log.id,
-        timestamp: log.timestamp,
-        day: log.day || "",
-        exercise: log.exercise || "",
-        type: log.type || "",
-        setNumber: Number(log.setNumber || 0),
-        reps: Number(log.reps || 0),
-        weight: Number(log.weight || 0),
-        minutes: Number(log.minutes || 0),
-        cardioCalories: Number(log.cardioCalories || 0),
-      }));
-    }
-
-    if (category === "foods") {
-      rows = (state.foods || []).flatMap((food) =>
-        (food.servings || []).map((serving) => ({
-          foodId: food.id,
-          foodName: food.name,
-          favorite: !!food.favorite,
-          servingId: serving.id,
-          servingLabel: serving.label,
-          calories: Number(serving.calories || 0),
-          protein: Number(serving.protein || 0),
-          carbs: Number(serving.carbs || 0),
-          fat: Number(serving.fat || 0),
-          createdAt: food.createdAt || "",
-        }))
-      );
-    }
-
-    if (category === "meals") {
-      rows = (state.mealTemplates || []).map((meal) => ({
-        id: meal.id,
-        name: meal.name,
-        favorite: !!meal.favorite,
-        calories: Number(meal.totals?.calories || 0),
-        protein: Number(meal.totals?.protein || 0),
-        carbs: Number(meal.totals?.carbs || 0),
-        fat: Number(meal.totals?.fat || 0),
-        itemCount: (meal.itemSnapshots || []).length,
-        createdAt: meal.createdAt || "",
-      }));
-    }
-
-    if (category === "workoutPlan") {
-      rows = (state.workoutPlan || []).map((row) => ({
-        id: row.id,
-        day: row.day,
-        exercise: row.exercise,
-        type: row.type,
-        targetSets: Number(row.targetSets || 0),
-        targetReps: Number(row.targetReps || 0),
-        targetTime: Number(row.targetTime || 0),
-        targetCalories: Number(row.targetCalories || 0),
-        notes: row.notes || "",
-        createdAt: row.createdAt || "",
-      }));
-    }
+  XLSX.writeFile(workbook, `health_fitness_tracker_export_${nowStamp}.xlsx`);
+  setSaveMessage("Excel workbook exported.");
+}
 
     const csv = toCsv(rows);
     downloadTextFile(`${category}_${nowStamp}.csv`, csv, "text/csv;charset=utf-8");
@@ -3142,6 +3182,21 @@ function deleteWeightLog(id) {
       </div>
     </AppSection>
 
+  <AppSection title="Export Files">
+    <AppSection title="Export Excel Workbook">
+  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="text-sm text-slate-700">
+      Download one Excel workbook with separate tabs for food, water, weight, sleep, notes, workouts, foods, meals, and workout plan.
+    </div>
+    <button
+      onClick={exportAllToWorkbook}
+      className="mt-4 w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
+    >
+      Export All to Excel (.xlsx)
+    </button>
+  </div>
+</AppSection>
+    
     <AppSection title="Export CSV">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <button onClick={() => exportCategory("foodLogs")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
@@ -3175,6 +3230,7 @@ function deleteWeightLog(id) {
           Export Workout Plan
         </button>
       </div>
+    </AppSection>
     </AppSection>
 
     <AppSection title="JSON Backup / Restore">
