@@ -426,7 +426,116 @@ export default function HealthFitnessTracker() {
           </div>
         )}
 
-        {activeTab === "log" && <PlaceholderPanel title="Log" description="Next section to implement: recent food logs, workout sessions, note logs, and summary snapshots." />}
+        {activeTab === "log" && (
+  <div className="grid gap-4 xl:grid-cols-3">
+    <AppSection title="Recent Food Logs">
+      <div className="grid max-h-[700px] gap-3 overflow-auto pr-1">
+        {state.foodLogs.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+            No food logs yet.
+          </div>
+        ) : (
+          state.foodLogs.slice(0, 12).map((log) => (
+            <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="font-medium text-slate-900">{log.name}</div>
+              <div className="mt-1 text-sm text-slate-600">
+                {Math.round(log.totals?.calories || 0)} cal • P {Math.round(log.totals?.protein || 0)} • C{" "}
+                {Math.round(log.totals?.carbs || 0)} • F {Math.round(log.totals?.fat || 0)}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                Logged {new Date(log.timestamp).toLocaleString()}
+              </div>
+
+              {(log.items || []).length > 0 && (
+                <div className="mt-2 space-y-1 text-sm text-slate-600">
+                  {log.items.map((item, idx) => (
+                    <div key={`${log.id}_${idx}`}>
+                      • {item.quantity} × {item.foodName || item.foodId} ({item.servingLabel || "serving"})
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </AppSection>
+
+    <div className="space-y-4 xl:col-span-1">
+      <AppSection title="Recent Workout Sessions">
+        <div className="grid max-h-[240px] gap-3 overflow-auto pr-1">
+          {state.workoutSessions.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              No workout sessions yet.
+            </div>
+          ) : (
+            state.workoutSessions.slice(0, 8).map((session) => (
+              <div key={session.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                <div className="font-medium text-slate-900">{session.day || "Workout Session"}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {new Date(session.timestamp).toLocaleString()}
+                </div>
+
+                {(session.summary || []).length > 0 && (
+                  <div className="mt-2 space-y-1 text-slate-600">
+                    {session.summary.map((item, idx) => (
+                      <div key={`${session.id}_${idx}`}>• {item}</div>
+                    ))}
+                  </div>
+                )}
+
+                {session.notes ? (
+                  <div className="mt-2 rounded-xl bg-white p-2 text-slate-600">
+                    Notes: {session.notes}
+                  </div>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
+      </AppSection>
+
+      <AppSection title="Recent Notes">
+        <div className="grid max-h-[180px] gap-3 overflow-auto pr-1">
+          {state.noteLogs.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+              No notes yet.
+            </div>
+          ) : (
+            state.noteLogs.slice(0, 8).map((log) => (
+              <div key={log.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                <div className="text-xs text-slate-500">
+                  {new Date(log.timestamp).toLocaleString()}
+                </div>
+                <div className="mt-1 text-slate-700">{log.note}</div>
+              </div>
+            ))
+          )}
+        </div>
+      </AppSection>
+
+      <AppSection title="Water / Sleep / Weight Snapshot">
+        <div className="space-y-3 text-sm">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            Water today: <span className="font-medium">{Math.round(todaysWater)} oz</span>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            Latest sleep:{" "}
+            <span className="font-medium">
+              {state.sleepLogs?.[0]?.hours ? `${state.sleepLogs[0].hours} hours` : "—"}
+            </span>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            Latest weight:{" "}
+            <span className="font-medium">
+              {state.weightLogs?.[0]?.weight ? `${state.weightLogs[0].weight} lb` : "—"}
+            </span>
+          </div>
+        </div>
+      </AppSection>
+    </div>
+  </div>
+)}
         {activeTab === "foodWeightEntry" && <PlaceholderPanel title="Food & Weight Entry" description="Next section to implement: food logging, meal logging, water intake, notes, and weight entry." />}
         {activeTab === "exerciseSleepEntry" && <PlaceholderPanel title="Exercise & Sleep Entry" description="Next section to implement: whole-workout entry screen, workout notes, and previous-night sleep entry/edit." />}
         {activeTab === "foodsMeals" && <PlaceholderPanel title="Foods / Meals" description="Next section to implement: combined food + meal management, editable foods, serving sizes, and meal-building." />}
