@@ -1414,12 +1414,11 @@ function deleteWeightLog(id) {
   }
 
   function filterByExportRange(items) {
-    return (items || []).filter((item) =>
-      isWithinDateRange(item.timestamp, exportStartDate, exportEndDate)
-    );
-  }
+ Date)  return (items || []).filter((item) =>
+  );
+}
 
-  function getExportRows(category) {
+function getExportRows(category) {
   if (category === "foodLogs") {
     return filterByExportRange(state.foodLogs).map((log) => ({
       id: log.id,
@@ -1537,15 +1536,17 @@ function deleteWeightLog(id) {
 
   return [];
 }
-    
-  function exportCategory(category) {
+
+function exportCategory(category) {
   const rows = getExportRows(category);
   const nowStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
   const csv = toCsv(rows);
   downloadTextFile(`${category}_${nowStamp}.csv`, csv, "text/csv;charset=utf-8");
   setSaveMessage(`${category} exported.`);
 }
-function exportAllToWorkbook() {function exportAll  const nowStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+
+function exportAllToWorkbook() {
+  const nowStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
 
   const sheetConfigs = [
     { key: "foodLogs", name: "Food Logs" },
@@ -1576,11 +1577,6 @@ function exportAllToWorkbook() {function exportAll  const nowStamp = new Date().
   XLSX.writeFile(workbook, `health_fitness_tracker_export_${nowStamp}.xlsx`);
   setSaveMessage("Excel workbook exported.");
 }
-
-    const csv = toCsv(rows);
-    downloadTextFile(`${category}_${nowStamp}.csv`, csv, "text/csv;charset=utf-8");
-    setSaveMessage(`${category} exported.`);
-  }
 
   function downloadJsonBackup() {
     const nowStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
