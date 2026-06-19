@@ -1413,10 +1413,11 @@ function deleteWeightLog(id) {
     URL.revokeObjectURL(url);
   }
 
-  function filterByExportRange(items) {
- Date)  return (items || []).filter((item) =>
+  function filterByExportRange(items) {function filterByExport (items || []).filter((item) =>
+    isWithinDateRange(item.timestamp, exportStartDate, exportEndDate)
   );
 }
+
 
 function getExportRows(category) {
   if (category === "foodLogs") {
@@ -3179,7 +3180,8 @@ function exportAllToWorkbook() {
     </AppSection>
 
   <AppSection title="Export Files">
-    <AppSection title="Export Excel Workbook">
+    <div className="space-y-4">
+
   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
     <div className="text-sm text-slate-700">
       Download one Excel workbook with separate tabs for food, water, weight, sleep, notes, workouts, foods, meals, and workout plan.
@@ -3191,9 +3193,7 @@ function exportAllToWorkbook() {
       Export All to Excel (.xlsx)
     </button>
   </div>
-</AppSection>
-    
-    <AppSection title="Export CSV">
+
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <button onClick={() => exportCategory("foodLogs")} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100">
           Export Food Logs
@@ -3226,7 +3226,7 @@ function exportAllToWorkbook() {
           Export Workout Plan
         </button>
       </div>
-    </AppSection>
+  </div>
     </AppSection>
 
     <AppSection title="JSON Backup / Restore">
