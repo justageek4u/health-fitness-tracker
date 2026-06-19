@@ -3048,7 +3048,37 @@ function deleteWeightLog(id) {
     </AppSection>
   </div>
 )}
-        {activeTab === "goals" && ({activeTab === "go3"
+
+        {activeTab === "goals" && (
+  <AppSection title="Goals">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-700">Calories</label>
+        <input
+          type="number"
+          value={state.goals.calories}
+          onChange={(e) => updateGoal("calories", e.target.value)}
+          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-700">Protein (g)</label>
+        <input
+          type="number"
+          value={state.goals.protein}
+          onChange={(e) => updateGoal("protein", e.target.value)}
+          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-700">Carbs (g)</label>
+        <input
+          type="number"
+          value={state.goals.carbs}
+          onChange={(e) => updateGoal("carbs", e.target.value)}
+          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
         />
       </div>
 
@@ -3085,36 +3115,13 @@ function deleteWeightLog(id) {
     </div>
   </AppSection>
 )}
-  <AppSection title="Goals">
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <label className="mb-2 block text-sm font-medium text-slate-700">Calories</label>
-        <input
-          type="number"
-          value={state.goals.calories}
-          onChange={(e) => updateGoal("calories", e.target.value)}
-          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
-        />
-      </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <label className="mb-2 block text-sm font-medium text-slate-700">Protein (g)</label>
-        <input
-          type="number"
-          value={state.goals.protein}
-          onChange={(e) => updateGoal("protein", e.target.value)}
-          className="w-full rounded-2xl border border-slate-300 px-3 py-3"
-        />
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <label className="mb-2 block text-sm font-medium text-slate-700">Carbs (g)</label>
-        <input
-          type="number"
-          value={state.goals.carbs}
-          onChange={(e) => updateGoal("carbs", e.target.value)}
-
-        {activeTab === "export" && ({activeTab === "mb-2 block text-sm font-medium text-slate-700">Start date</label>
+{activeTab === "export" && (
+  <div className="space-y-4">
+    <AppSection title="Export Range">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">Start date</label>
           <input
             type="date"
             value={exportStartDate}
@@ -3201,10 +3208,74 @@ function deleteWeightLog(id) {
     </AppSection>
   </div>
 )}
+
+{activeTab === "howTo" && (
   <div className="space-y-4">
-    <AppSection title="Export Range">
-      <div className="grid gap-3 md:grid-cols-2">
-        <div>
+    <AppSection title="How To Use This App">
+      <div className="space-y-4 text-sm text-slate-700">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Dashboard</div>
+          <div className="mt-2">
+            Use the Dashboard to monitor calories, protein, carbs, fat, workout progress, water, sleep, weight, lifting, and cardio trends over time.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Log</div>
+          <div className="mt-2">
+            Use the Log tab to review saved entries. Filter by date range and edit or delete entries if something was logged incorrectly.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Food & Weight Entry</div>
+          <div className="mt-2">
+            Search foods or meals, log water, add notes, and record weight. Click the save button once at the bottom to save the entry.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Exercise & Sleep Entry</div>
+          <div className="mt-2">
+            Choose the workout day, enter completed exercise values, add workout notes, and record the previous night’s sleep. Save everything with one button.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Foods / Meals</div>
+          <div className="mt-2">
+            Add foods, define serving sizes, search and favorite foods, build meal templates, and save favorite meals for faster future logging.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Workouts</div>
+          <div className="mt-2">
+            Import a workout plan from CSV, paste CSV text, or build rows manually. Edit planned workouts directly in the Workouts tab.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Goals</div>
+          <div className="mt-2">
+            Update your macro, water, and sleep targets here so the dashboard trend charts compare your actual values against your goals.
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="font-medium text-slate-900">Export / Backup</div>
+          <div className="mt-2">
+            Export CSV files by category over a selected date range, or download/import a full JSON backup of the app. JSON imports ignore duplicate IDs.
+          </div>
+        </div>
+      </div>
+    </AppSection>
+  </div>
+)}
+      </div>
+    </div>
+  );
+}
 
         {activeTab === "howTo" && (
   <div className="space-y-4">
