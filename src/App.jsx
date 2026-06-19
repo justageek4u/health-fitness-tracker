@@ -485,32 +485,40 @@ export default function HealthFitnessTracker() {
           </div>
         </div>
 
-        <div className="mb-6 hidden md:flex md:flex-wrap md:items-start md:gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">Monitor</span>
-            {monitorTabs.map(([key, label]) => (
-              <DesktopTabButton key={key} active={activeTab === key} onClick={() => goToTab(key)}>
-                {label}
-              </DesktopTabButton>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">Record</span>
-            {recordTabs.map(([key, label]) => (
-              <DesktopTabButton key={key} active={activeTab === key} onClick={() => goToTab(key)}>
-                {label}
-              </DesktopTabButton>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">Plan</span>
-            {planTabs.map(([key, label]) => (
-              <DesktopTabButton key={key} active={activeTab === key} onClick={() => goToTab(key)}>
-                {label}
-              </DesktopTabButton>
-            ))}
-          </div>
-        </div>
+        <div className="mb-6 hidden md:flex md:flex-col md:gap-3">
+  <div className="flex flex-wrap items-center gap-2">
+    <span className="mr-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+      Monitor
+    </span>
+    {monitorTabs.map(([key, label]) => (
+      <DesktopTabButton key={key} active={activeTab === key} onClick={() => goToTab(key)}>
+        {label}
+      </DesktopTabButton>
+    ))}
+  </div>
+
+  <div className="flex flex-wrap items-center gap-2">
+    <span className="mr-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+      Record
+    </span>
+    {recordTabs.map(([key, label]) => (
+      <DesktopTabButton key={key} active={activeTab === key} onClick={() => goToTab(key)}>
+        {label}
+      </DesktopTabButton>
+    ))}
+  </div>
+
+  <div className="flex flex-wrap items-center gap-2">
+    <span className="mr-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+      Plan
+    </span>
+    {planTabs.map(([key, label]) => (
+      <DesktopTabButton key={key} active={activeTab === key} onClick={() => goToTab(key)}>
+        {label}
+      </DesktopTabButton>
+    ))}
+  </div>
+</div>
 
         <AnimatePresence>
           {mobileMenuOpen && (
@@ -689,9 +697,9 @@ export default function HealthFitnessTracker() {
   </div>
 )}
         {activeTab === "foodWeightEntry" && (
-  <div className="grid gap-4 xl:grid-cols-2">
-    <AppSection title="Food, Water, and Notes Entry">
-      <div className="space-y-5">
+  <div className="space-y-4">
+    <div className="grid gap-4 xl:grid-cols-2">
+      <AppSection title="Food Entry">
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="text-sm font-medium text-slate-800">Food</div>
           <select
@@ -730,7 +738,9 @@ export default function HealthFitnessTracker() {
             placeholder="Quantity"
           />
         </div>
+      </AppSection>
 
+      <AppSection title="Meal Entry">
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="text-sm font-medium text-slate-800">Meal</div>
           <select
@@ -746,9 +756,12 @@ export default function HealthFitnessTracker() {
             ))}
           </select>
         </div>
+      </AppSection>
+    </div>
 
+    <div className="grid gap-4 xl:grid-cols-2">
+      <AppSection title="Water Intake">
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="text-sm font-medium text-slate-800">Water Intake</div>
           <input
             type="number"
             value={waterAmount}
@@ -757,40 +770,40 @@ export default function HealthFitnessTracker() {
             placeholder="Water in oz"
           />
         </div>
+      </AppSection>
 
+      <AppSection title="Weight Entry">
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="text-sm font-medium text-slate-800">Notes Through the Day</div>
-          <textarea
-            value={dailyNote}
-            onChange={(e) => setDailyNote(e.target.value)}
-            className="min-h-[110px] w-full rounded-2xl border border-slate-300 p-3"
-            placeholder="Energy level, soreness, sickness, stress, appetite, etc."
-          />
-        </div>
-      </div>
-    </AppSection>
-
-    <AppSection title="Weight Entry">
-      <div className="space-y-5">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="text-sm font-medium text-slate-800">Weight</div>
           <input
             type="number"
             value={weightValue}
             onChange={(e) => setWeightValue(e.target.value)}
             placeholder="Enter bodyweight in lb"
-            className="mt-3 w-full rounded-2xl border border-slate-300 px-3 py-3"
+            className="w-full rounded-2xl border border-slate-300 px-3 py-3"
           />
         </div>
+      </AppSection>
+    </div>
 
-        <button
-          onClick={saveFoodWeightEntry}
-          className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
-        >
-          Save Food / Weight Entry
-        </button>
+    <AppSection title="Notes Through the Day">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <textarea
+          value={dailyNote}
+          onChange={(e) => setDailyNote(e.target.value)}
+          className="min-h-[140px] w-full rounded-2xl border border-slate-300 p-3"
+          placeholder="Energy level, soreness, sickness, stress, appetite, etc."
+        />
       </div>
     </AppSection>
+
+    <div>
+      <button
+        onClick={saveFoodWeightEntry}
+        className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-4 text-base font-medium text-white shadow hover:opacity-95"
+      >
+        Save Food / Weight Entry
+      </button>
+    </div>
   </div>
 )}
         {activeTab === "exerciseSleepEntry" && <PlaceholderPanel title="Exercise & Sleep Entry" description="Next section to implement: whole-workout entry screen, workout notes, and previous-night sleep entry/edit." />}
